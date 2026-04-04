@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { fetchTasks, completeTask, getOctokit } from "@/lib/github";
+import { fetchTasks, completeTask, getOctokit, updateMemberStats } from "@/lib/github";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
 import Sidebar from "@/components/sidebar";
 import { KanbanSquare, Loader2, MoreHorizontal, ArrowRight } from "lucide-react";
@@ -52,12 +52,17 @@ export default function BoardPage() {
 
   const handleMoveToDone = async (num: number) => {
     // @ts-ignore
-    if (session?.accessToken && repoOwner && repoName) {
+    if (session?.accessToken && repoOwner && repoName && session.user?.name) {
       setShowCelebration(true);
       // Optimistic update
       setTasks(tasks.map(t => t.number === num ? { ...t, state: 'closed' } : t));
+      
       // @ts-ignore
-      await completeTask(session.accessToken, repoOwner, repoName, num);
+      const token = session.accessToken;
+      await completeTask(token, repoOwner, repoName, num);
+      
+      // Award points for completion
+      await updateMemberStats(token, repoOwner, repoName, session.user.name, 50);
     }
   };
 

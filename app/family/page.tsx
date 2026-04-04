@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { getOctokit } from "@/lib/github";
+import { getOctokit, fetchStats } from "@/lib/github";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
 import Sidebar from "@/components/sidebar";
 import { Users, Trophy, Flame, Loader2, UserPlus, Star } from "lucide-react";
@@ -28,24 +28,26 @@ export default function FamilyPage() {
         setLoading(true);
         try {
           // @ts-ignore
-          const octokit = getOctokit(session.accessToken as string);
+          const token = session.accessToken as string;
+          const octokit = getOctokit(token);
           
-          // 1. Fetch repo collaborators as family members
+          // 1. Fetch repo collaborators
           const { data: collabs } = await octokit.repos.listCollaborators({
             owner: repoOwner,
             repo: repoName,
           });
 
-          // 2. Try to fetch stats.json (mocking for now if it doesn't exist)
-          // In a real implementation, we'd fetch the file content from GitHub
-          const stats = collabs.map((c, i) => ({
+          // 2. Fetch real stats from stats.json
+          const { stats } = await fetchStats(token, repoOwner, repoName);
+
+          const memberData = collabs.map((c) => ({
             login: c.login,
             avatar_url: c.avatar_url,
-            points: 1000 - (i * 200), // Mock data
-            streak: 5 - i, // Mock data
+            points: stats.members[c.login]?.points || 0,
+            streak: stats.members[c.login]?.streak || 0,
           }));
 
-          setMembers(stats);
+          setMembers(memberData);
         } catch (error) {
           console.error(error);
         } finally {
