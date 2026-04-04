@@ -9,9 +9,11 @@ interface OnboardingState {
   repoName: string;
   isOrg: boolean;
   invitedMembers: string[];
+  magicEnabled: boolean;
   setStep: (step: number) => void;
   setGithubData: (data: Partial<OnboardingState>) => void;
   addInvitedMember: (username: string) => void;
+  toggleMagic: () => void;
 }
 
 export const useOnboardingStore = create<OnboardingState>()(
@@ -24,12 +26,14 @@ export const useOnboardingStore = create<OnboardingState>()(
       repoName: "home-ops",
       isOrg: false,
       invitedMembers: [],
+      magicEnabled: true,
       setStep: (step) => set({ step }),
       setGithubData: (data) => set((state) => ({ ...state, ...data })),
       addInvitedMember: (username) =>
         set((state) => ({
           invitedMembers: [...state.invitedMembers, username],
         })),
+      toggleMagic: () => set((state) => ({ magicEnabled: !state.magicEnabled })),
     }),
     {
       name: "octohome-onboarding",

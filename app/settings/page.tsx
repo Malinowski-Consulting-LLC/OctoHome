@@ -8,22 +8,41 @@ import { useOnboardingStore } from "@/store/use-onboarding-store";
 
 export default function SettingsPage() {
   const { data: session } = useSession();
-  const { repoOwner, repoName, isOrg } = useOnboardingStore();
+  const { repoOwner, repoName, isOrg, magicEnabled, toggleMagic } = useOnboardingStore();
 
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="flex min-h-screen bg-zinc-50 font-sans">
       <Sidebar />
       <main className="flex-1 p-12 overflow-y-auto">
         <header className="mb-12">
-          <h1 className="text-6xl font-black uppercase tracking-tighter flex items-center gap-4">
-            <Settings className="w-12 h-12" /> House Settings
+          <h1 className="text-7xl font-black uppercase tracking-tighter flex items-center gap-6">
+            <Settings className="w-16 h-16" /> House Settings
           </h1>
-          <p className="text-2xl font-bold text-zinc-600 mt-2">
+          <p className="text-3xl font-bold text-zinc-500 mt-4 uppercase italic">
             Manage your household OS connection.
           </p>
         </header>
 
-        <div className="max-w-4xl space-y-12">
+        <div className="max-w-5xl space-y-12">
+          {/* Accessibility */}
+          <section className="border-8 border-black p-12 bg-white shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+            <h2 className="text-5xl font-black uppercase mb-10 flex items-center gap-6 italic">
+              <Sparkles className="w-12 h-12" /> Experience
+            </h2>
+            <div className="flex justify-between items-center bg-zinc-100 p-8 border-4 border-black">
+              <div>
+                <h3 className="text-3xl font-black uppercase tracking-tight">Magic Mode</h3>
+                <p className="text-xl font-bold text-zinc-500 uppercase italic mt-2">Enables fluid animations and visual depth.</p>
+              </div>
+              <button 
+                onClick={toggleMagic}
+                className={`w-24 h-12 border-4 border-black relative transition-colors ${magicEnabled ? 'bg-black' : 'bg-white'}`}
+              >
+                <div className={`absolute top-1 bottom-1 w-8 transition-all border-2 border-black ${magicEnabled ? 'right-1 bg-white' : 'left-1 bg-black'}`} />
+              </button>
+            </div>
+          </section>
+
           {/* Repo Connection */}
           <section className="border-8 border-black p-12 bg-zinc-50 shadow-[16px_16px_0px_0px_rgba(0,0,0,1)]">
             <h2 className="text-4xl font-black uppercase mb-8 flex items-center gap-4">
