@@ -196,3 +196,47 @@ export async function completeTask(token: string, owner: string, repo: string, i
   });
   return data;
 }
+
+export async function fetchStats(token: string, owner: string, repo: string) {
+  const octokit = getOctokit(token);
+  try {
+    const { data }: any = await octokit.repos.getContent({
+      owner,
+      repo,
+      path: "stats.json",
+    });
+    const content = Buffer.from(data.content, "base64").toString();
+    const stats = JSON.parse(content);
+    return { stats, sha: data.sha };
+  } catch (e) {
+    // If it doesn't exist, return default
+    return { stats: { members: {} } as any, sha: undefined };
+  }
+}
+
+export async function updateMemberStats(
+  token: string,
+  owner: string,
+  repo: string,
+  username: string,
+  pointsDelta: number
+) {
+  const { stats, sha } = await fetchStats(token, owner, repo);
+  
+  if (!stats.members[username]) {
+    stats.members[username] = { points: 0, streak: 0, lastActivity: null };
+  }
+  
+  stats.members[username].points += pointsDelta;
+  stats.members[username].lastActivity = new Date().toISOString();
+
+  return await commitFile(
+    token,
+    owner,
+    repo,
+    "stats.json",
+    JSON.stringify(stats, null, 2),
+    `chore: update stats for ${username}`,
+    sha
+  );
+}
