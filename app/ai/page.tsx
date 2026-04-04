@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import Sidebar from "@/components/sidebar";
-import { Sparkles, Send, Loader2, Bot, User } from "lucide-react";
+import { Sparkles, Send, Bot, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
 import { EnergyOrb } from "@/components/magic/energy-orb";
@@ -15,7 +14,6 @@ interface Message {
 }
 
 export default function AICopilotPage() {
-  const { data: session } = useSession();
   const { repoOwner, repoName } = useOnboardingStore();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([
@@ -55,7 +53,8 @@ export default function AICopilotPage() {
       }));
       
       setTimeout(() => setOrbState("idle"), 2000);
-    } catch (err) {
+    } catch (error) {
+      console.error(error);
       setOrbState("error");
       setMessages(prev => prev.filter(m => !m.loading).concat({ role: "ai", content: "Something went wrong. Is your GitHub connection active?" }));
       setTimeout(() => setOrbState("idle"), 3000);

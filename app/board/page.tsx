@@ -1,15 +1,14 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
-import { fetchTasks, completeTask, getOctokit, updateMemberStats } from "@/lib/github";
+import { useEffect, useRef, useState } from "react";
+import { completeTask, getOctokit, updateMemberStats } from "@/lib/github";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
 import Sidebar from "@/components/sidebar";
 import { KanbanSquare, Loader2, MoreHorizontal, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MagicalCelebration } from "@/components/magic/magical-celebration";
 import { AnimatedBeam } from "@/components/magic/animated-beam";
-import { useRef } from "react";
 
 const COLUMNS = ["To Do", "This Week", "In Progress", "Done"];
 
@@ -26,12 +25,11 @@ export default function BoardPage() {
 
   useEffect(() => {
     async function load() {
-      // @ts-ignore
       if (session?.accessToken && repoOwner && repoName) {
+        const token = session.accessToken;
         setLoading(true);
         try {
-          // @ts-ignore
-          const octokit = getOctokit(session.accessToken as string);
+          const octokit = getOctokit(token);
           // Fetch both open and closed issues for the board
           const { data } = await octokit.issues.listForRepo({
             owner: repoOwner,
@@ -51,14 +49,12 @@ export default function BoardPage() {
   }, [session, repoOwner, repoName]);
 
   const handleMoveToDone = async (num: number) => {
-    // @ts-ignore
     if (session?.accessToken && repoOwner && repoName && session.user?.name) {
+      const token = session.accessToken;
       setShowCelebration(true);
       // Optimistic update
       setTasks(tasks.map(t => t.number === num ? { ...t, state: 'closed' } : t));
       
-      // @ts-ignore
-      const token = session.accessToken;
       await completeTask(token, repoOwner, repoName, num);
       
       // Award points for completion

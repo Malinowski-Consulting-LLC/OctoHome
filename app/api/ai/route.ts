@@ -8,7 +8,6 @@ import { createTask } from "@/lib/github";
  */
 export async function POST(req: Request) {
   const session = await auth();
-  // @ts-ignore
   if (!session?.accessToken) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -22,7 +21,6 @@ export async function POST(req: Request) {
     
     let title = prompt;
     let label = "Maintenance"; // Default
-    let assignees: string[] = [];
 
     if (lowerPrompt.includes("buy") || lowerPrompt.includes("grocery") || lowerPrompt.includes("milk")) {
       label = "Groceries";
@@ -40,7 +38,6 @@ export async function POST(req: Request) {
 
     // 2. Create the Issue
     const issue = await createTask(
-      // @ts-ignore
       session.accessToken,
       repoOwner,
       repoName,

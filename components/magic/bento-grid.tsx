@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/magic-utils";
@@ -61,9 +62,12 @@ export const BentoCard = ({
         "pointer-events-none absolute bottom-0 flex w-full translate-y-10 flex-row items-center p-8 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100"
       )}
     >
-      <button className="pointer-events-auto border-4 border-black bg-black px-6 py-2 font-black uppercase text-white hover:bg-zinc-800">
+      <Link
+        href={href}
+        className="pointer-events-auto border-4 border-black bg-black px-6 py-2 font-black uppercase text-white hover:bg-zinc-800"
+      >
         {cta}
-      </button>
+      </Link>
     </div>
     <div className="pointer-events-none absolute inset-0 transition-all duration-300 group-hover:bg-black/[.03]" />
   </motion.div>

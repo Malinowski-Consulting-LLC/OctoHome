@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { fetchTasks, completeTask } from "@/lib/github";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
 import Sidebar from "@/components/sidebar";
-import { CheckCircle, ListTodo, Plus, Filter, Loader2 } from "lucide-react";
+import { CheckCircle, ListTodo, Plus, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { MagicalCelebration } from "@/components/magic/magical-celebration";
@@ -20,12 +20,11 @@ export default function TasksPage() {
 
   useEffect(() => {
     async function load() {
-      // @ts-ignore
       if (session?.accessToken && repoOwner && repoName) {
+        const token = session.accessToken;
         setLoading(true);
         try {
-          // @ts-ignore
-          const fetched = await fetchTasks(session.accessToken, repoOwner, repoName);
+          const fetched = await fetchTasks(token, repoOwner, repoName);
           setTasks(fetched);
         } catch (error) {
           console.error(error);
@@ -38,12 +37,11 @@ export default function TasksPage() {
   }, [session, repoOwner, repoName]);
 
   const handleComplete = async (num: number) => {
-    // @ts-ignore
     if (session?.accessToken && repoOwner && repoName) {
+      const token = session.accessToken;
       setShowCelebration(true);
       setTasks(tasks.filter(t => t.number !== num));
-      // @ts-ignore
-      await completeTask(session.accessToken, repoOwner, repoName, num);
+      await completeTask(token, repoOwner, repoName, num);
     }
   };
 
@@ -97,7 +95,7 @@ export default function TasksPage() {
           <div className="border-8 border-black border-dashed p-24 text-center">
             <CheckCircle className="w-24 h-24 mx-auto mb-6 text-zinc-300" />
             <h2 className="text-4xl font-black uppercase mb-2">Zero Tasks!</h2>
-            <p className="text-xl font-bold text-zinc-500">You're all caught up. Enjoy the family time.</p>
+            <p className="text-xl font-bold text-zinc-500">You&apos;re all caught up. Enjoy the family time.</p>
           </div>
         ) : (
           <div className="space-y-6">

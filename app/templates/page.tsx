@@ -3,11 +3,12 @@
 import { useSession } from "next-auth/react";
 import { useState } from "react";
 import Sidebar from "@/components/sidebar";
-import { Sparkles, Calendar, Plus, Save, Loader2, Trash2 } from "lucide-react";
+import { Sparkles, Calendar, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { commitFile } from "@/lib/github";
 import { useRouter } from "next/navigation";
+import { useOnboardingStore } from "@/store/use-onboarding-store";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const CRON_DAYS = ["1", "2", "3", "4", "5", "6", "0"]; // GitHub crons: 0-6 is Sun-Sat
@@ -15,6 +16,7 @@ const CRON_DAYS = ["1", "2", "3", "4", "5", "6", "0"]; // GitHub crons: 0-6 is S
 export default function RoutinesPage() {
   const { data: session } = useSession();
   const router = useRouter();
+  const { repoOwner, repoName } = useOnboardingStore();
   const [title, setTitle] = useState("");
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,18 +56,14 @@ jobs:
   };
 
   const handleCreate = async () => {
-    // @ts-ignore
-    if (session?.accessToken && title && selectedDays.length > 0) {
+    if (session?.accessToken && repoOwner && repoName && title && selectedDays.length > 0) {
+      const token = session.accessToken;
       setIsSubmitting(true);
       try {
         const yaml = generateYaml(title, selectedDays);
         const fileName = title.toLowerCase().replace(/\s+/g, "-") + ".yml";
-        // @ts-ignore
-        const { repoOwner, repoName } = JSON.parse(localStorage.getItem('octohome-onboarding') || '{}').state;
-        
         await commitFile(
-          // @ts-ignore
-          session.accessToken as string,
+          token,
           repoOwner,
           repoName,
           `.github/workflows/routine-${fileName}`,
@@ -127,13 +125,13 @@ jobs:
               <Sparkles className="w-6 h-6" /> How it works
             </h3>
             <p className="text-xl font-bold text-zinc-600">
-              OctoHome will create a "GitHub Action" in your repository. This action will automatically open a new task for you at 9:00 AM on the days you selected.
+              OctoHome will create a &quot;GitHub Action&quot; in your repository. This action will automatically open a new task for you at 9:00 AM on the days you selected.
             </p>
           </div>
 
           <Button 
             onClick={handleCreate}
-            disabled={isSubmitting || !title || selectedDays.length === 0}
+            disabled={isSubmitting || !session?.accessToken || !repoOwner || !repoName || !title || selectedDays.length === 0}
             size="lg" 
             className="w-full h-32 text-4xl font-black border-8 border-black"
           >

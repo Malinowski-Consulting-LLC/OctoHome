@@ -23,12 +23,10 @@ export default function FamilyPage() {
 
   useEffect(() => {
     async function load() {
-      // @ts-ignore
       if (session?.accessToken && repoOwner && repoName) {
+        const token = session.accessToken;
         setLoading(true);
         try {
-          // @ts-ignore
-          const token = session.accessToken as string;
           const octokit = getOctokit(token);
           
           // 1. Fetch repo collaborators

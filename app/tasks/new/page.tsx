@@ -46,14 +46,12 @@ export default function NewTaskPage() {
   const selectedLabel = watch("label");
 
   const onSubmit = async (values: TaskFormValues) => {
-    // @ts-ignore
     if (session?.accessToken && repoOwner && repoName) {
+      const token = session.accessToken;
       setIsSubmitting(true);
       try {
-        // @ts-ignore
         await createTask(
-          // @ts-ignore
-          session.accessToken,
+          token,
           repoOwner,
           repoName,
           values.title,

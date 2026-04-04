@@ -2,7 +2,7 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/magic-utils";
-import { RefObject, useEffect, useMemo, useState } from "react";
+import { RefObject, useEffect, useState } from "react";
 
 export interface AnimatedBeamProps {
   className?: string;
@@ -78,7 +78,7 @@ export const AnimatedBeam = ({
         initial={{ pathLength: 0, pathOffset: 0 }}
         animate={shouldReduceMotion ? { pathLength: 1 } : { 
           pathLength: [0, 0.2, 0],
-          pathOffset: [0, 1, 1],
+          pathOffset: reverse ? [1, 0, 0] : [0, 1, 1],
         }}
         transition={{
           duration,

@@ -14,15 +14,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, account }) {
-      if (account) {
+    async jwt({ token, account, profile }) {
+      if (typeof account?.access_token === "string") {
         token.accessToken = account.access_token;
+      }
+      if (
+        profile &&
+        typeof profile === "object" &&
+        "login" in profile &&
+        typeof profile.login === "string"
+      ) {
+        token.login = profile.login;
       }
       return token;
     },
     async session({ session, token }) {
-      // @ts-ignore
-      session.accessToken = token.accessToken;
+      if (typeof token.accessToken === "string") {
+        session.accessToken = token.accessToken;
+      }
+      if (typeof token.login === "string") {
+        session.user = { ...session.user, login: token.login };
+      }
       return session;
     },
   },

@@ -29,7 +29,7 @@ export async function waitForRepo(token: string, owner: string, repo: string, ma
     try {
       await octokit.repos.get({ owner, repo });
       return true;
-    } catch (e) {
+    } catch {
       await new Promise((resolve) => setTimeout(resolve, 2000));
     }
   }
@@ -79,27 +79,6 @@ export async function commitFile(
 }
 
 /**
- * Enables GitHub Pages for the repository.
- */
-export async function enablePages(token: string, owner: string, repo: string) {
-  const octokit = getOctokit(token);
-  try {
-    const { data } = await octokit.repos.createPagesSite({
-      owner,
-      repo,
-      source: {
-        branch: "main",
-        path: "/",
-      },
-    });
-    return data;
-  } catch (e) {
-    console.error("Pages might already be enabled or repo is empty", e);
-    return null;
-  }
-}
-
-/**
  * Invites a family member to the repository.
  */
 export async function inviteFamilyMember(token: string, owner: string, repo: string, username: string) {
@@ -139,7 +118,7 @@ export async function setupDefaultLabels(token: string, owner: string, repo: str
         repo,
         ...label,
       });
-    } catch (e) {
+    } catch {
       // Label might already exist, ignore
     }
   }
@@ -208,7 +187,7 @@ export async function fetchStats(token: string, owner: string, repo: string) {
     const content = Buffer.from(data.content, "base64").toString();
     const stats = JSON.parse(content);
     return { stats, sha: data.sha };
-  } catch (e) {
+  } catch {
     // If it doesn't exist, return default
     return { stats: { members: {} } as any, sha: undefined };
   }

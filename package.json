@@ -7,14 +7,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint ."
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
-    "@eslint/eslintrc": "^3.3.5",
     "@hookform/resolvers": "^5.2.2",
     "@octokit/rest": "^22.0.1",
     "@radix-ui/react-avatar": "^1.1.11",
@@ -47,6 +46,10 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.10.1"
+    "@eslint/eslintrc": "^3.3.5",
+    "@eslint/js": "^9.39.4",
+    "@tauri-apps/cli": "^2.10.1",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.2"
   }
 }

@@ -60,13 +60,13 @@ export default function Dashboard() {
         <BentoGrid className="relative z-10">
           <div ref={pulseRef} className="md:col-span-2 md:row-span-1 border-8 border-black p-10 bg-black text-white relative overflow-hidden flex flex-col justify-between shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
             <div className="relative z-10">
-              <h2 className="text-5xl font-black uppercase tracking-tighter flex items-center gap-4 mb-4">
-                <Sparkles className="w-12 h-12 text-yellow-400" /> AI COPILOT
-              </h2>
-              <p className="text-3xl font-bold italic opacity-80 leading-tight max-w-2xl">
-                "Dad has done 70% of chores this week. Would you like to help out?"
-              </p>
-            </div>
+                  <h2 className="text-5xl font-black uppercase tracking-tighter flex items-center gap-4 mb-4">
+                    <Sparkles className="w-12 h-12 text-yellow-400" /> AI COPILOT
+                  </h2>
+                  <p className="text-3xl font-bold italic opacity-80 leading-tight max-w-2xl">
+                    &quot;Dad has done 70% of chores this week. Would you like to help out?&quot;
+                  </p>
+                </div>
             <div className="relative z-10 flex gap-4 mt-8">
               <Button variant="outline" className="bg-white text-black border-none h-20 px-10 text-2xl font-black">
                 ASK AI
@@ -121,7 +121,10 @@ export default function Dashboard() {
                 </div>
                 <div className="mt-12 flex justify-between items-center">
                   <div className="w-14 h-14 border-4 border-black bg-zinc-100 rounded-full flex items-center justify-center font-black text-xl">MB</div>
-                  <button className="w-20 h-20 border-8 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all transform active:scale-90 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  <button
+                    onClick={handleComplete}
+                    className="w-20 h-20 border-8 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all transform active:scale-90 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                  >
                     <CheckCircle className="w-10 h-10" />
                   </button>
                 </div>

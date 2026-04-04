@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
 import { useState } from "react";
 import { Home, ArrowRight, Github, Users, Rocket, ExternalLink, Plus, Loader2 } from "lucide-react";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MorphingCard } from "./magic/morphing-card";
 import { motion } from "framer-motion";
-import { forkRepo, waitForRepo, setupDefaultLabels, enablePages, inviteFamilyMember } from "@/lib/github";
+import { forkRepo, waitForRepo, setupDefaultLabels, inviteFamilyMember } from "@/lib/github";
 
 export default function OnboardingWizard() {
   const { data: session } = useSession();
@@ -19,37 +19,27 @@ export default function OnboardingWizard() {
   const nextStep = () => setStep(step + 1);
 
   const handleBlastOff = async () => {
-    // @ts-ignore
     if (session?.accessToken) {
+      const token = session.accessToken;
       setIsBlastingOff(true);
       try {
-        // @ts-ignore
-        const owner = isOrg ? householdName.replace(/\s+/g, '-').toLowerCase() : session.user?.login || "my-home";
+        const owner = isOrg ? householdName.replace(/\s+/g, "-").toLowerCase() : session.user?.login || "my-home";
         const name = "home-ops";
         
         // 1. Start the fork
-        // @ts-ignore
-        await forkRepo(session.accessToken as string, "octohome", "template", isOrg ? owner : undefined);
+        await forkRepo(token, "octohome", "template", isOrg ? owner : undefined);
         
         // 2. Poll until the repo is ready
-        // @ts-ignore
-        const ready = await waitForRepo(session.accessToken as string, owner, name);
+        const ready = await waitForRepo(token, owner, name);
         
         if (ready) {
-          // @ts-ignore
-          const token = session.accessToken as string;
-          
           // 3. Initialize household labels
-          // @ts-ignore
           await setupDefaultLabels(token, owner, name);
           
           // 4. Invite family members
           for (const member of invitedMembers) {
             await inviteFamilyMember(token, owner, name, member);
           }
-
-          // 5. Enable GitHub Pages
-          await enablePages(token, owner, name);
           
           setGithubData({ repoOwner: owner, repoName: name });
           nextStep();
@@ -90,7 +80,7 @@ export default function OnboardingWizard() {
             <Github className="w-10 h-10" /> Connect GitHub
           </button>
           <p className="mt-12 text-lg underline cursor-pointer font-black uppercase tracking-widest" onClick={() => window.open('https://github.com/signup')}>
-            Don't have an account? Create one <ExternalLink className="inline w-5 h-5 ml-1" />
+            Don&apos;t have an account? Create one <ExternalLink className="inline w-5 h-5 ml-1" />
           </p>
         </motion.div>
       </div>
