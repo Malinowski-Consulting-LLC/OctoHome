@@ -13,6 +13,7 @@ const atkinson = Atkinson_Hyperlegible({
 export const metadata: Metadata = {
   title: "OctoHome | The GitHub Home App for Everyone",
   description: "Run your household using GitHub Issues with a magical, family-friendly interface.",
+  manifest: "/manifest.json",
 };
 
 export default async function RootLayout({
