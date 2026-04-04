@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MorphingCard } from "./magic/morphing-card";
 import { motion } from "framer-motion";
+import { forkRepo, waitForRepo, setupDefaultLabels } from "@/lib/github";
 
 export default function OnboardingWizard() {
   const { data: session } = useSession();
@@ -22,16 +23,27 @@ export default function OnboardingWizard() {
     if (session?.accessToken) {
       setIsBlastingOff(true);
       try {
-        const owner = isOrg ? householdName.replace(/\s+/g, '-').toLowerCase() : session.user?.name || "my-home";
+        const owner = isOrg ? householdName.replace(/\s+/g, '-').toLowerCase() : session.user?.login || "my-home";
         const name = "home-ops";
         
-        setGithubData({ repoOwner: owner, repoName: name });
+        // 1. Start the fork
+        await forkRepo(session.accessToken as string, "octohome", "template", isOrg ? owner : undefined);
         
-        // Simulate progress for the "Magical" feel
-        await new Promise(r => setTimeout(r, 2000));
-        nextStep();
+        // 2. Poll until the repo is ready
+        const ready = await waitForRepo(session.accessToken as string, owner, name);
+        
+        if (ready) {
+          // 3. Initialize household labels
+          await setupDefaultLabels(session.accessToken as string, owner, name);
+          
+          setGithubData({ repoOwner: owner, repoName: name });
+          nextStep();
+        } else {
+          alert("GitHub is taking a while to fork. Please try again in a moment!");
+        }
       } catch (error) {
         console.error(error);
+        alert("Something went wrong during setup. Check your GitHub permissions.");
       } finally {
         setIsBlastingOff(false);
       }

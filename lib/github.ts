@@ -20,6 +20,22 @@ export async function forkRepo(token: string, owner: string, repo: string, org?:
   return data;
 }
 
+/**
+ * Polls the GitHub API until a repository is available.
+ */
+export async function waitForRepo(token: string, owner: string, repo: string, maxRetries = 10) {
+  const octokit = getOctokit(token);
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      await octokit.repos.get({ owner, repo });
+      return true;
+    } catch (e) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+  }
+  return false;
+}
+
 export async function createRepo(token: string, name: string, org?: string) {
   const octokit = getOctokit(token);
   if (org) {
