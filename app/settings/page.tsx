@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import Sidebar from "@/components/sidebar";
-import { Settings, Shield, Database, Github, LogOut, Bell } from "lucide-react";
+import { Settings, Shield, Database, Github, LogOut, Bell, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
 
