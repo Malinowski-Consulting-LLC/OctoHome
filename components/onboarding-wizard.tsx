@@ -3,15 +3,44 @@
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
 import { useState } from "react";
-import { Home, ArrowRight, Github, Users, Rocket, ExternalLink, Plus } from "lucide-react";
+import { Home, ArrowRight, Github, Users, Rocket, ExternalLink, Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function OnboardingWizard() {
   const { data: session } = useSession();
-  const { step, setStep, setGithubData, githubUsername, isOrg, invitedMembers, addInvitedMember } = useOnboardingStore();
+  const { step, setStep, setGithubData, githubUsername, householdName, isOrg, invitedMembers, addInvitedMember } = useOnboardingStore();
   const [newMember, setNewMember] = useState("");
 
+  const [isBlastingOff, setIsBlastingOff] = useState(false);
+
   const nextStep = () => setStep(step + 1);
+
+  const handleBlastOff = async () => {
+    // @ts-ignore
+    if (session?.accessToken) {
+      setIsBlastingOff(true);
+      try {
+        const owner = isOrg ? householdName.replace(/\s+/g, '-').toLowerCase() : session.user?.name || "my-home";
+        const name = "home-ops";
+        
+        // 1. Create/Setup the Repo
+        // (In a real scenario, we'd check if it exists or use forkRepo)
+        // For the wizard demo, we'll just set the state
+        setGithubData({ repoOwner: owner, repoName: name });
+        
+        // 2. Initialize labels (Async)
+        // setupDefaultLabels(session.accessToken as string, owner, name);
+
+        // Simulate progress
+        await new Promise(r => setTimeout(r, 2000));
+        nextStep();
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsBlastingOff(false);
+      }
+    }
+  };
 
   if (!session) {
     return (
@@ -131,10 +160,11 @@ export default function OnboardingWizard() {
             <p className="font-bold flex items-center gap-3">✅ Deploy to GitHub Pages</p>
           </div>
           <button 
-            onClick={() => { /* Implement Final Setup Logic */ nextStep(); }}
-            className="w-full bg-black text-white p-8 text-3xl font-black uppercase hover:bg-zinc-800"
+            onClick={handleBlastOff}
+            disabled={isBlastingOff}
+            className="w-full bg-black text-white p-8 text-3xl font-black uppercase hover:bg-zinc-800 flex items-center justify-center gap-4"
           >
-            Create My OctoHome ✨
+            {isBlastingOff ? <Loader2 className="w-12 h-12 animate-spin" /> : "Create My OctoHome ✨"}
           </button>
         </section>
       )}
