@@ -8,6 +8,7 @@ import Sidebar from "@/components/sidebar";
 import { CheckCircle, ListTodo, Plus, Filter, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { MagicalCelebration } from "@/components/magic/magical-celebration";
 
 export default function TasksPage() {
   const { data: session } = useSession();
@@ -15,6 +16,7 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("All");
+  const [showCelebration, setShowCelebration] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -38,6 +40,7 @@ export default function TasksPage() {
   const handleComplete = async (num: number) => {
     // @ts-ignore
     if (session?.accessToken && repoOwner && repoName) {
+      setShowCelebration(true);
       setTasks(tasks.filter(t => t.number !== num));
       // @ts-ignore
       await completeTask(session.accessToken, repoOwner, repoName, num);
@@ -52,6 +55,7 @@ export default function TasksPage() {
 
   return (
     <div className="flex min-h-screen bg-white">
+      <MagicalCelebration active={showCelebration} onComplete={() => setShowCelebration(false)} />
       <Sidebar />
       <main className="flex-1 p-12 overflow-y-auto">
         <header className="flex justify-between items-center mb-12">

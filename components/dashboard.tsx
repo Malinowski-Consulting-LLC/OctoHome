@@ -7,19 +7,26 @@ import { Sparkles, Flame, Star, CheckCircle, ListTodo, Users, KanbanSquare } fro
 import { Button } from "@/components/ui/button";
 import { BentoGrid, BentoCard } from "./magic/bento-grid";
 import { AnimatedBeam } from "./magic/animated-beam";
-import { useRef } from "react";
+import { MagicalCelebration } from "./magic/magical-celebration";
+import { useRef, useState } from "react";
 
 export default function Dashboard() {
   const { data: session } = useSession();
   const { householdName } = useOnboardingStore();
+  const [showCelebration, setShowCelebration] = useState(false);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const pulseRef = useRef<HTMLDivElement>(null);
   const pointsRef = useRef<HTMLDivElement>(null);
   const streakRef = useRef<HTMLDivElement>(null);
 
+  const handleComplete = () => {
+    setShowCelebration(true);
+  };
+
   return (
     <div className="flex min-h-screen bg-zinc-50 font-sans" ref={containerRef}>
+      <MagicalCelebration active={showCelebration} onComplete={() => setShowCelebration(false)} />
       <Sidebar />
       <main className="flex-1 p-12 overflow-y-auto relative">
         {/* Animated Beams */}

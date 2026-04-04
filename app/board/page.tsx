@@ -7,6 +7,7 @@ import { useOnboardingStore } from "@/store/use-onboarding-store";
 import Sidebar from "@/components/sidebar";
 import { KanbanSquare, Loader2, MoreHorizontal, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MagicalCelebration } from "@/components/magic/magical-celebration";
 
 const COLUMNS = ["To Do", "This Week", "In Progress", "Done"];
 
@@ -15,6 +16,7 @@ export default function BoardPage() {
   const { repoOwner, repoName } = useOnboardingStore();
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -42,9 +44,20 @@ export default function BoardPage() {
     load();
   }, [session, repoOwner, repoName]);
 
+  const handleMoveToDone = async (num: number) => {
+    // @ts-ignore
+    if (session?.accessToken && repoOwner && repoName) {
+      setShowCelebration(true);
+      // Optimistic update
+      setTasks(tasks.map(t => t.number === num ? { ...t, state: 'closed' } : t));
+      // @ts-ignore
+      await completeTask(session.accessToken, repoOwner, repoName, num);
+    }
+  };
+
   const getColumnTasks = (col: string) => {
     if (col === "Done") return tasks.filter(t => t.state === "closed");
-    
+
     // For other columns, we look for labels like "Status: To Do"
     // If no status label, it defaults to "To Do"
     return tasks.filter(t => {
@@ -57,6 +70,7 @@ export default function BoardPage() {
 
   return (
     <div className="flex min-h-screen bg-white">
+      <MagicalCelebration active={showCelebration} onComplete={() => setShowCelebration(false)} />
       <Sidebar />
       <main className="flex-1 p-12 flex flex-col overflow-hidden">
         <header className="mb-12">
