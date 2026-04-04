@@ -14,7 +14,7 @@ const navItems = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ familyRef }: { familyRef?: React.RefObject<HTMLAnchorElement | null> }) {
   const pathname = usePathname();
   const { data: session } = useSession();
 
@@ -37,6 +37,7 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              {...(item.label === "Family" ? { ref: familyRef } : {})}
               className={`flex items-center gap-4 px-6 py-4 border-4 transition-all uppercase font-black text-xl ${
                 isActive 
                   ? "bg-black text-white border-black" 

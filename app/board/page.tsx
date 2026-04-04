@@ -8,15 +8,21 @@ import Sidebar from "@/components/sidebar";
 import { KanbanSquare, Loader2, MoreHorizontal, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MagicalCelebration } from "@/components/magic/magical-celebration";
+import { AnimatedBeam } from "@/components/magic/animated-beam";
+import { useRef } from "react";
 
 const COLUMNS = ["To Do", "This Week", "In Progress", "Done"];
 
 export default function BoardPage() {
   const { data: session } = useSession();
-  const { repoOwner, repoName } = useOnboardingStore();
+  const { repoOwner, repoName, magicEnabled } = useOnboardingStore();
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCelebration, setShowCelebration] = useState(false);
+  
+  const containerRef = useRef<HTMLDivElement>(null);
+  const doneHeaderRef = useRef<HTMLDivElement>(null);
+  const sidebarTargetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function load() {
@@ -69,9 +75,18 @@ export default function BoardPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="flex min-h-screen bg-zinc-50 font-sans" ref={containerRef}>
       <MagicalCelebration active={showCelebration} onComplete={() => setShowCelebration(false)} />
-      <Sidebar />
+      {magicEnabled && (
+        <AnimatedBeam 
+          containerRef={containerRef} 
+          fromRef={doneHeaderRef} 
+          toRef={sidebarTargetRef} 
+          curvature={-100}
+          duration={3}
+        />
+      )}
+      <Sidebar familyRef={sidebarTargetRef as any} />
       <main className="flex-1 p-12 flex flex-col overflow-hidden">
         <header className="mb-12">
           <h1 className="text-6xl font-black uppercase tracking-tighter flex items-center gap-4">
@@ -91,7 +106,10 @@ export default function BoardPage() {
           <div className="flex-1 flex gap-8 overflow-x-auto pb-8">
             {COLUMNS.map(col => (
               <div key={col} className="w-96 flex-shrink-0 flex flex-col">
-                <div className="border-b-8 border-black pb-4 mb-6 flex justify-between items-end">
+                <div 
+                  ref={col === "Done" ? doneHeaderRef : null}
+                  className="border-b-8 border-black pb-4 mb-6 flex justify-between items-end bg-white p-4 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                >
                   <h2 className="text-3xl font-black uppercase tracking-tight">{col}</h2>
                   <span className="text-xl font-black bg-black text-white px-3 py-1">{getColumnTasks(col).length}</span>
                 </div>
@@ -116,9 +134,16 @@ export default function BoardPage() {
                         <div className="w-8 h-8 rounded-full border-2 border-black bg-zinc-100 flex items-center justify-center text-xs font-bold">
                           {task.user.login.slice(0, 2).toUpperCase()}
                         </div>
-                        <Button variant="ghost" size="sm" className="h-8 border-2 font-black text-xs">
-                          MOVE <ArrowRight className="w-3 h-3 ml-1" />
-                        </Button>
+                        {col !== "Done" && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 border-2 font-black text-xs"
+                            onClick={() => handleMoveToDone(task.number)}
+                          >
+                            DONE <ArrowRight className="w-3 h-3 ml-1" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
