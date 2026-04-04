@@ -79,6 +79,46 @@ export async function commitFile(
 }
 
 /**
+ * Enables GitHub Pages for the repository.
+ */
+export async function enablePages(token: string, owner: string, repo: string) {
+  const octokit = getOctokit(token);
+  try {
+    const { data } = await octokit.repos.createPagesSite({
+      owner,
+      repo,
+      source: {
+        branch: "main",
+        path: "/",
+      },
+    });
+    return data;
+  } catch (e) {
+    console.error("Pages might already be enabled or repo is empty", e);
+    return null;
+  }
+}
+
+/**
+ * Invites a family member to the repository.
+ */
+export async function inviteFamilyMember(token: string, owner: string, repo: string, username: string) {
+  const octokit = getOctokit(token);
+  try {
+    const { data } = await octokit.repos.addCollaborator({
+      owner,
+      repo,
+      username,
+      permission: "push",
+    });
+    return data;
+  } catch (e) {
+    console.error(`Failed to invite ${username}`, e);
+    return null;
+  }
+}
+
+/**
  * Initializes default household labels.
  */
 export async function setupDefaultLabels(token: string, owner: string, repo: string) {

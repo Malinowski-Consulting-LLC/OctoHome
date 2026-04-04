@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MorphingCard } from "./magic/morphing-card";
 import { motion } from "framer-motion";
-import { forkRepo, waitForRepo, setupDefaultLabels } from "@/lib/github";
+import { forkRepo, waitForRepo, setupDefaultLabels, enablePages, inviteFamilyMember } from "@/lib/github";
 
 export default function OnboardingWizard() {
   const { data: session } = useSession();
@@ -36,9 +36,20 @@ export default function OnboardingWizard() {
         const ready = await waitForRepo(session.accessToken as string, owner, name);
         
         if (ready) {
+          // @ts-ignore
+          const token = session.accessToken as string;
+          
           // 3. Initialize household labels
           // @ts-ignore
-          await setupDefaultLabels(session.accessToken as string, owner, name);
+          await setupDefaultLabels(token, owner, name);
+          
+          // 4. Invite family members
+          for (const member of invitedMembers) {
+            await inviteFamilyMember(token, owner, name, member);
+          }
+
+          // 5. Enable GitHub Pages
+          await enablePages(token, owner, name);
           
           setGithubData({ repoOwner: owner, repoName: name });
           nextStep();
