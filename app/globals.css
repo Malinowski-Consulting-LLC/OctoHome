@@ -3,15 +3,28 @@
 @theme {
   --font-sans: var(--font-atkinson), ui-sans-serif, system-ui, sans-serif;
 
-  --color-background: #ffffff;
-  --color-foreground: #000000;
-  --color-primary: #000000;
-  --color-primary-foreground: #ffffff;
-  --color-secondary: #f4f4f5;
-  --color-secondary-foreground: #18181b;
-  --color-accent: #004a99;
-  --color-accent-foreground: #ffffff;
-  --color-border: #000000;
+  /* Remap Tailwind color utilities onto semantic tokens so that
+     bg-background, text-foreground, border-border, ring-*, etc.
+     automatically reflect the active theme at runtime. */
+  --color-background: var(--app-bg);
+  --color-foreground: var(--text-1);
+  --color-primary: var(--accent-solid);
+  --color-primary-foreground: var(--app-bg);
+  --color-secondary: var(--surface-2);
+  --color-secondary-foreground: var(--text-1);
+  --color-muted: var(--surface-2);
+  --color-muted-foreground: var(--text-2);
+  --color-accent: var(--ring-color);
+  --color-accent-foreground: var(--app-bg);
+  --color-border: var(--border-subtle);
+  --color-input: var(--interactive-bg);
+  --color-ring: var(--ring-color);
+  --color-card: var(--surface-1);
+  --color-card-foreground: var(--text-1);
+  --color-popover: var(--surface-1);
+  --color-popover-foreground: var(--text-1);
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
 
   --radius-lg: 1rem;
   --radius-md: 0.75rem;
@@ -19,7 +32,7 @@
 
   --animate-beam: beam 3s infinite;
   --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  --animate-shimmer: shimmer 2s linear infinite;
+  --animate-shimmer: shimmer var(--magic-shimmer-duration, 2.4s) linear infinite;
 
   @keyframes beam {
     0% { transform: translateX(-100%); }
@@ -35,31 +48,91 @@
   }
 }
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 0%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 0%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 0%;
-    --primary: 0 0% 0%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 210 100% 30%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 0 0% 0%;
-    --input: 240 5.9% 90%;
-    --ring: 210 100% 30%;
-    --radius: 1rem;
-  }
+/* ─── Aether light (default / :root) ──────────────────────────────────── */
+:root {
+  --app-bg: #f6f8ff;
+  --surface-1: rgba(255, 255, 255, 0.88);
+  --surface-2: rgba(244, 247, 255, 0.78);
+  --text-1: #101933;
+  --text-2: #6277a0;
+  --radius-card: 24px;
+  --radius-control: 18px;
+  --shell-gap: 24px;
+  --page-pad-x: clamp(16px, 3vw, 32px);
+  --border-subtle: rgba(191, 208, 241, 0.58);
+  --border-strong: rgba(16, 25, 49, 0.16);
+  --ring-color: #5c83ff;
+  --interactive-bg: rgba(255, 255, 255, 0.92);
+  --interactive-hover: rgba(235, 241, 255, 0.96);
+  --accent-solid: #162141;
+  --accent-gradient: linear-gradient(135deg, rgba(118, 156, 255, 0.24), rgba(95, 231, 207, 0.18));
+  --hero-glow: radial-gradient(circle, rgba(156, 196, 255, 0.42), rgba(156, 196, 255, 0));
+  --shadow-card: 0 18px 38px rgba(24, 40, 84, 0.12);
+  --shadow-hero: 0 24px 56px rgba(24, 40, 84, 0.18);
+  --magic-beam-opacity: 0.65;
+  --magic-shimmer-duration: 2.4s;
+  --shell-rail-width: 248px;
+  --radius: 1rem;
 }
 
+/* ─── Aether dark ─────────────────────────────────────────────────────── */
+[data-theme="aether"][data-color-scheme="dark"] {
+  --app-bg: #0c1327;
+  --surface-1: rgba(17, 25, 48, 0.92);
+  --surface-2: rgba(24, 34, 64, 0.78);
+  --text-1: #edf3ff;
+  --text-2: #b4c1e2;
+  --border-subtle: rgba(112, 132, 194, 0.18);
+  --border-strong: rgba(255, 255, 255, 0.08);
+  --interactive-bg: rgba(255, 255, 255, 0.06);
+  --interactive-hover: rgba(255, 255, 255, 0.10);
+  --accent-solid: #eef3ff;
+  --accent-gradient: linear-gradient(135deg, rgba(146, 136, 255, 0.28), rgba(63, 200, 255, 0.18));
+  --hero-glow: radial-gradient(circle, rgba(146, 136, 255, 0.24), rgba(146, 136, 255, 0));
+  --shadow-card: 0 20px 44px rgba(6, 9, 19, 0.34);
+  --shadow-hero: 0 26px 60px rgba(4, 8, 18, 0.42);
+}
+
+/* ─── High Contrast (ignores data-color-scheme; always deterministic) ─── */
+[data-theme="high-contrast"] {
+  --app-bg: #ffffff;
+  --surface-1: #ffffff;
+  --surface-2: #f2f2f2;
+  --text-1: #000000;
+  --text-2: #1a1a1a;
+  --border-subtle: #000000;
+  --border-strong: #000000;
+  --ring-color: #004a99;
+  --interactive-bg: #ffffff;
+  --interactive-hover: #f2f2f2;
+  --accent-solid: #000000;
+  --accent-gradient: none;
+  --hero-glow: none;
+  --shadow-card: none;
+  --shadow-hero: none;
+  --magic-beam-opacity: 0;
+  --magic-shimmer-duration: 0s;
+}
+
+/* ─── Effect budget ───────────────────────────────────────────────────── */
+[data-effects="reduced"] .animate-pulse-slow,
+[data-effects="reduced"] .animate-shimmer,
+[data-effects="reduced"] [data-magic-effect] {
+  animation: none !important;
+  opacity: 1 !important;
+}
+
+.hero-surface,
+[data-card-role="hero"] {
+  overflow: hidden;
+}
+
+[data-theme="high-contrast"] [data-magic-effect] {
+  filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* ─── Base layer ──────────────────────────────────────────────────────── */
 @layer base {
   * {
     @apply border-border;
