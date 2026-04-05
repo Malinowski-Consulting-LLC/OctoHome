@@ -27,6 +27,68 @@ const THEME_OPTIONS: Array<{
   },
 ];
 
+function ThemePreview(props: { theme: AppearanceTheme }) {
+  if (props.theme === "aether") {
+    return (
+      <div aria-hidden="true" className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="overflow-hidden rounded-[calc(var(--radius-control)-4px)] border border-[rgba(191,208,241,0.72)] bg-white shadow-[0_12px_24px_rgba(118,156,255,0.12)]">
+          <div className="flex items-center justify-between border-b border-[rgba(191,208,241,0.72)] bg-[rgba(244,247,255,0.82)] px-3 py-2 text-[11px] font-medium uppercase tracking-[0.16em] text-[rgba(88,109,171,0.92)]">
+            <span>Light</span>
+            <span className="h-2 w-2 rounded-full bg-[rgba(118,156,255,0.9)]" />
+          </div>
+          <div className="space-y-2 p-3">
+            <div className="h-2 w-16 rounded-full bg-[rgba(88,109,171,0.18)]" />
+            <div className="rounded-[12px] border border-[rgba(191,208,241,0.6)] bg-[rgba(255,255,255,0.92)] p-2">
+              <div className="h-2 w-3/4 rounded-full bg-[rgba(118,156,255,0.26)]" />
+              <div className="mt-2 h-1.5 w-1/2 rounded-full bg-[rgba(95,231,207,0.3)]" />
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-hidden rounded-[calc(var(--radius-control)-4px)] border border-[rgba(112,132,194,0.35)] bg-[rgba(17,25,48,0.94)] shadow-[0_12px_24px_rgba(9,14,29,0.24)]">
+          <div className="flex items-center justify-between border-b border-[rgba(112,132,194,0.35)] bg-[rgba(24,34,64,0.82)] px-3 py-2 text-[11px] font-medium uppercase tracking-[0.16em] text-[rgba(210,221,255,0.88)]">
+            <span>Dark</span>
+            <span className="h-2 w-2 rounded-full bg-[rgba(146,136,255,0.92)]" />
+          </div>
+          <div className="space-y-2 p-3">
+            <div className="h-2 w-16 rounded-full bg-[rgba(210,221,255,0.2)]" />
+            <div className="rounded-[12px] border border-[rgba(112,132,194,0.28)] bg-[rgba(24,34,64,0.82)] p-2">
+              <div className="h-2 w-3/4 rounded-full bg-[rgba(146,136,255,0.32)]" />
+              <div className="mt-2 h-1.5 w-1/2 rounded-full bg-[rgba(63,200,255,0.3)]" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div aria-hidden="true" className="mt-4 overflow-hidden rounded-[calc(var(--radius-control)-4px)] border-2 border-black bg-white">
+      <div className="flex items-center justify-between border-b-2 border-black bg-[#f2f2f2] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-black">
+        <span>High Contrast</span>
+        <span className="rounded-full border border-black bg-white px-2 py-0.5 text-[10px] leading-none">Readable</span>
+      </div>
+      <div className="grid gap-3 p-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="space-y-2">
+          <div className="h-2 w-3/4 bg-black" />
+          <div className="rounded-[10px] border-2 border-black bg-[#f2f2f2] p-2">
+            <div className="h-2 w-2/3 bg-black" />
+            <div className="mt-2 h-2 w-1/2 bg-[#4d4d4d]" />
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2 sm:w-24 sm:flex-col">
+          <span className="rounded-md border-2 border-black bg-black px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white">
+            Focus
+          </span>
+          <span className="rounded-md border-2 border-black bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-black">
+            Clarity
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AppearanceSettingsCard() {
   const selectedTheme = useAppearanceStore((state) => state.selectedTheme);
   const setSelectedTheme = useAppearanceStore((state) => state.setSelectedTheme);
@@ -98,6 +160,8 @@ export function AppearanceSettingsCard() {
                     />
                   </span>
                 </div>
+
+                <ThemePreview theme={option.value} />
 
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">{option.description}</p>
               </label>
