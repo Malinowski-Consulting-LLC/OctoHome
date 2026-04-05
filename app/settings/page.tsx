@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import Sidebar from "@/components/sidebar";
-import { Settings, Shield, Database, Github, LogOut, Sparkles } from "lucide-react";
+import { Settings, Shield, Database, LogOut, Sparkles } from "lucide-react";
+import { GithubIcon } from "@/components/ui/github-icon";
 import { Button } from "@/components/ui/button";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
 import { useResolvedHomeRepo } from "@/lib/use-resolved-home-repo";
@@ -86,7 +87,8 @@ export default function SettingsPage() {
           {/* Account */}
           <section className="border-8 border-black p-12 bg-white">
             <h2 className="text-4xl font-black uppercase mb-8 flex items-center gap-4">
-              <Github className="w-8 h-8" /> Connected Account
+              <GithubIcon className="w-8 h-8" />
+ Connected Account
             </h2>
             <div className="flex items-center gap-8 mb-12">
               {session?.user?.image ? (
@@ -103,7 +105,8 @@ export default function SettingsPage() {
               {accountUrl ? (
                 <Button asChild className="h-24 text-2xl font-black border-8 border-black bg-white text-black hover:bg-zinc-100 flex gap-4">
                   <a href={accountUrl} target="_blank" rel="noreferrer">
-                    <Github className="w-8 h-8" /> OPEN GITHUB
+                    <GithubIcon className="w-8 h-8" />
+ OPEN GITHUB
                   </a>
                 </Button>
               ) : (

@@ -3,7 +3,8 @@
 import { useSession, signIn } from "next-auth/react";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
 import { useState } from "react";
-import { Home, ArrowRight, Github, Users, Rocket, ExternalLink, Plus, Loader2 } from "lucide-react";
+import { Home, ArrowRight, Users, Rocket, ExternalLink, Plus, Loader2 } from "lucide-react";
+import { GithubIcon } from "@/components/ui/github-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MorphingCard } from "./magic/morphing-card";
@@ -150,7 +151,7 @@ export default function OnboardingWizard() {
             onClick={() => signIn("github")}
             className="bg-black text-white px-12 py-6 rounded-none font-black text-3xl hover:translate-x-2 hover:-translate-y-2 transition-all focus-ring uppercase border-8 border-black flex items-center gap-4 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] hover:shadow-[20px_20px_0px_0px_rgba(0,0,0,1)]"
           >
-            <Github className="w-10 h-10" /> Connect GitHub
+            <GithubIcon className="w-10 h-10" /> Connect GitHub
           </button>
           <p
             className="mt-12 text-lg underline cursor-pointer font-black uppercase tracking-widest"

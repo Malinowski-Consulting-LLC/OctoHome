@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { AlertCircle, Github, Home, Loader2 } from "lucide-react";
+import { AlertCircle, Home, Loader2 } from "lucide-react";
+import { GithubIcon } from "@/components/ui/github-icon";
 
 import { Button } from "@/components/ui/button";
 import type { ResolvedHomeRepoStatus } from "@/lib/use-resolved-home-repo";
@@ -37,7 +38,7 @@ export default function RepoRequiredState({
     return (
       <div className="border-8 border-black bg-white p-12 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
         <div className="flex items-start gap-6">
-          <Github className="mt-1 h-10 w-10 flex-shrink-0" />
+          <GithubIcon className="mt-1 h-10 w-10 flex-shrink-0" />
           <div className="space-y-6">
             <div>
               <h2 className="text-3xl font-black uppercase">Sign in to continue</h2>
