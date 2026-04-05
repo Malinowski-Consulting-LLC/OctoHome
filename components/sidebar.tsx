@@ -27,7 +27,7 @@ export default function Sidebar({ familyRef }: SidebarProps) {
       <MobileNavSheet />
 
       <aside className="sticky top-0 hidden h-screen shrink-0 md:flex md:w-[88px] xl:w-[var(--shell-rail-width)]">
-        <div className="flex h-full w-full flex-col border-r border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] px-2 py-4 text-foreground backdrop-blur-xl xl:px-3">
+        <div className="flex h-full w-full flex-col overflow-y-auto border-r border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] px-2 py-4 text-foreground backdrop-blur-xl xl:px-3">
           <Link
             href="/"
             aria-label="Go to dashboard"
@@ -103,7 +103,9 @@ export default function Sidebar({ familyRef }: SidebarProps) {
 
               <button
                 type="button"
-                onClick={() => signOut()}
+                onClick={() => {
+                  void signOut({ callbackUrl: "/" });
+                }}
                 aria-label="Sign out"
                 title="Sign out"
                 className="inline-flex size-11 shrink-0 items-center justify-center rounded-[14px] border border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] text-muted-foreground transition-colors hover:bg-[color:var(--interactive-hover)] hover:text-foreground focus:outline-none focus:ring-4 focus:ring-[color:var(--ring-color)]"

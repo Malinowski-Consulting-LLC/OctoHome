@@ -128,7 +128,7 @@ export default function MobileNavSheet() {
               type="button"
               onClick={() => {
                 setOpen(false);
-                signOut();
+                void signOut({ callbackUrl: "/" });
               }}
               className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-[color:var(--interactive-hover)] focus:outline-none focus:ring-4 focus:ring-[color:var(--ring-color)]"
             >
