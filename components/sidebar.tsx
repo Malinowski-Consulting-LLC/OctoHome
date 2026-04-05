@@ -1,71 +1,119 @@
 "use client";
 
+import type { RefObject } from "react";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ListTodo, KanbanSquare, Users, Sparkles, Settings, LogOut } from "lucide-react";
+import { Home, LogOut } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 
-const navItems = [
-  { href: "/", label: "Dashboard", icon: Home },
-  { href: "/tasks", label: "Tasks", icon: ListTodo },
-  { href: "/board", label: "Family Board", icon: KanbanSquare },
-  { href: "/ai", label: "AI Copilot", icon: Sparkles },
-  { href: "/family", label: "Family", icon: Users },
-  { href: "/settings", label: "Settings", icon: Settings },
-];
+import { cn } from "@/lib/utils";
 
-export default function Sidebar({ familyRef }: { familyRef?: React.RefObject<HTMLAnchorElement | null> }) {
+import MobileNavSheet from "./mobile-nav-sheet";
+import { isNavItemActive, sidebarNavItems } from "./sidebar-nav";
+
+type SidebarProps = {
+  familyRef?: RefObject<HTMLAnchorElement | null>;
+};
+
+export default function Sidebar({ familyRef }: SidebarProps) {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const profileName = session?.user?.name || "Household";
+  const profileEmail = session?.user?.email || "Connected account";
 
   return (
-    <aside className="w-80 bg-white border-r-8 border-black flex flex-col h-screen sticky top-0">
-      <div className="p-8">
-        <Link href="/" className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-black rounded-none flex items-center justify-center">
-            <Home className="w-8 h-8 text-white" />
-          </div>
-          <span className="text-3xl font-black tracking-tighter uppercase">OctoHome</span>
-        </Link>
-      </div>
+    <>
+      <MobileNavSheet />
 
-      <nav className="flex-1 px-4 space-y-4 mt-8">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              {...(item.label === "Family" ? { ref: familyRef } : {})}
-              className={`flex items-center gap-4 px-6 py-4 border-4 transition-all uppercase font-black text-xl ${
-                isActive 
-                  ? "bg-black text-white border-black" 
-                  : "text-zinc-500 border-transparent hover:border-black hover:text-black"
-              }`}
-            >
-              <Icon className="w-6 h-6" />
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
+      <aside className="sticky top-0 hidden h-screen shrink-0 md:flex md:w-[88px] xl:w-[var(--shell-rail-width)]">
+        <div className="flex h-full w-full flex-col border-r border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] px-2 py-4 text-foreground backdrop-blur-xl xl:px-3">
+          <Link
+            href="/"
+            aria-label="Go to dashboard"
+            className="mb-6 flex items-center gap-3 rounded-[var(--radius-control)] border border-transparent px-2 py-2 transition-colors hover:bg-[color:var(--interactive-hover)] focus:outline-none focus:ring-4 focus:ring-[color:var(--ring-color)] md:justify-center xl:justify-start"
+          >
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-[14px] bg-[color:var(--accent-solid)] text-[color:var(--app-bg)] shadow-[var(--shadow-card)]">
+              <Home className="size-5" />
+            </span>
 
-      <div className="p-4 mt-auto">
-        <div className="border-4 border-black p-4 flex items-center gap-4 bg-zinc-50">
-          {session?.user?.image ? (
-            <img src={session.user.image} alt="Avatar" className="w-12 h-12 rounded-none border-2 border-black" />
-          ) : (
-            <div className="w-12 h-12 border-2 border-black bg-zinc-200" />
-          )}
-          <div className="flex-1 truncate">
-            <p className="text-lg font-black uppercase truncate leading-none">{session?.user?.name || "Family"}</p>
+            <span className="hidden min-w-0 flex-col xl:flex">
+              <span className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                Home OS
+              </span>
+              <span className="text-lg font-semibold text-foreground">OctoHome</span>
+            </span>
+          </Link>
+
+          <nav className="flex flex-1 flex-col gap-2" aria-label="Primary navigation">
+            {sidebarNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = isNavItemActive(pathname, item.href);
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  ref={item.href === "/family" ? familyRef : undefined}
+                  aria-current={isActive ? "page" : undefined}
+                  aria-label={item.label}
+                  title={item.label}
+                  className={cn(
+                    "group flex items-center gap-3 rounded-[var(--radius-control)] border px-3 py-3 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-[color:var(--ring-color)] md:justify-center md:px-0 xl:justify-start xl:px-4",
+                    isActive
+                      ? "border-[color:var(--border-strong)] bg-[color:var(--interactive-bg)] text-foreground shadow-[var(--shadow-card)]"
+                      : "border-transparent text-muted-foreground hover:border-[color:var(--border-subtle)] hover:bg-[color:var(--interactive-hover)] hover:text-foreground"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex size-10 shrink-0 items-center justify-center rounded-[14px] transition-colors",
+                      isActive
+                        ? "bg-[color:var(--accent-solid)] text-[color:var(--app-bg)]"
+                        : "bg-[color:var(--interactive-bg)] text-muted-foreground group-hover:bg-[color:var(--interactive-hover)] group-hover:text-foreground"
+                    )}
+                  >
+                    <Icon className="size-5" />
+                  </span>
+
+                  <span className="hidden xl:block">{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="mt-6 rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] p-2 shadow-[var(--shadow-card)] xl:p-4">
+            <div className="flex items-center gap-3 md:flex-col xl:flex-row">
+              {session?.user?.image ? (
+                <img
+                  src={session.user.image}
+                  alt={`${profileName} avatar`}
+                  className="size-12 shrink-0 rounded-[14px] border border-[color:var(--border-subtle)] object-cover"
+                />
+              ) : (
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-[14px] border border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] text-sm font-semibold text-muted-foreground">
+                  {profileName.slice(0, 1).toUpperCase()}
+                </div>
+              )}
+
+              <div className="hidden min-w-0 flex-1 xl:block">
+                <p className="truncate text-sm font-semibold text-foreground">{profileName}</p>
+                <p className="truncate text-xs text-muted-foreground">{profileEmail}</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => signOut()}
+                aria-label="Sign out"
+                title="Sign out"
+                className="inline-flex size-11 shrink-0 items-center justify-center rounded-[14px] border border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] text-muted-foreground transition-colors hover:bg-[color:var(--interactive-hover)] hover:text-foreground focus:outline-none focus:ring-4 focus:ring-[color:var(--ring-color)]"
+              >
+                <LogOut className="size-5" />
+              </button>
+            </div>
           </div>
-          <button onClick={() => signOut()} className="text-zinc-400 hover:text-red-600 transition-colors">
-            <LogOut className="w-6 h-6" />
-          </button>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }
