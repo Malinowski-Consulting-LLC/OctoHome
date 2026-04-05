@@ -4,6 +4,9 @@ import Link from "next/link";
 import { AlertCircle, Github, Home, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/page-header";
+import { SurfaceCard } from "@/components/surface-card";
+import { ActionGroup } from "@/components/action-group";
 import type { ResolvedHomeRepoStatus } from "@/lib/use-resolved-home-repo";
 
 type RepoRequiredStateProps = {
@@ -19,83 +22,78 @@ export default function RepoRequiredState({
 }: RepoRequiredStateProps) {
   if (status === "auth-loading" || status === "loading") {
     return (
-      <div className="border-8 border-black bg-white p-12 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
-        <div className="flex items-center gap-6">
-          <Loader2 className="h-10 w-10 animate-spin" />
-          <div>
-            <h2 className="text-3xl font-black uppercase">Loading your home</h2>
-            <p className="mt-2 text-lg font-bold text-zinc-500">
-              Checking your GitHub connection and household repository.
-            </p>
-          </div>
+      <SurfaceCard>
+        <div className="flex items-center gap-4">
+          <Loader2 className="h-6 w-6 shrink-0 animate-spin text-muted-foreground" />
+          <PageHeader
+            title="Loading your home"
+            subtitle="Checking your GitHub connection and household repository."
+          />
         </div>
-      </div>
+      </SurfaceCard>
     );
   }
 
   if (status === "signed-out") {
     return (
-      <div className="border-8 border-black bg-white p-12 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
-        <div className="flex items-start gap-6">
-          <Github className="mt-1 h-10 w-10 flex-shrink-0" />
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-3xl font-black uppercase">Sign in to continue</h2>
-              <p className="mt-2 text-lg font-bold text-zinc-500">
-                Open the home screen and connect your GitHub account before using this page.
-              </p>
-            </div>
-            <Button asChild className="border-4 border-black font-black uppercase">
-              <Link href="/">Go Home</Link>
-            </Button>
+      <SurfaceCard>
+        <div className="flex items-start gap-4">
+          <Github className="mt-1 h-6 w-6 shrink-0 text-muted-foreground" />
+          <div className="space-y-4">
+            <PageHeader
+              title="Sign in to continue"
+              subtitle="Open the home screen and connect your GitHub account before using this page."
+            />
+            <ActionGroup>
+              <Button asChild>
+                <Link href="/">Go Home</Link>
+              </Button>
+            </ActionGroup>
           </div>
         </div>
-      </div>
+      </SurfaceCard>
     );
   }
 
   if (status === "missing") {
     return (
-      <div className="border-8 border-black bg-white p-12 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
-        <div className="flex items-start gap-6">
-          <Home className="mt-1 h-10 w-10 flex-shrink-0" />
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-3xl font-black uppercase">Finish onboarding first</h2>
-              <p className="mt-2 text-lg font-bold text-zinc-500">
-                This page needs your household repository. Complete setup on the home screen, then come back.
-              </p>
-            </div>
-            <Button asChild className="border-4 border-black font-black uppercase">
-              <Link href="/">Open onboarding</Link>
-            </Button>
+      <SurfaceCard>
+        <div className="flex items-start gap-4">
+          <Home className="mt-1 h-6 w-6 shrink-0 text-muted-foreground" />
+          <div className="space-y-4">
+            <PageHeader
+              title="Finish onboarding first"
+              subtitle="This page needs your household repository. Complete setup on the home screen, then come back."
+            />
+            <ActionGroup>
+              <Button asChild>
+                <Link href="/">Open onboarding</Link>
+              </Button>
+            </ActionGroup>
           </div>
         </div>
-      </div>
+      </SurfaceCard>
     );
   }
 
   return (
-    <div className="border-8 border-red-600 bg-white p-12 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
-      <div className="flex items-start gap-6">
-        <AlertCircle className="mt-1 h-10 w-10 flex-shrink-0 text-red-600" />
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-3xl font-black uppercase text-red-600">Could not reach GitHub</h2>
-            <p className="mt-2 text-lg font-bold text-zinc-500">
-              {error ?? "The household repository could not be resolved right now."}
-            </p>
-          </div>
-          <div className="flex gap-4">
-            <Button onClick={onRetry} className="border-4 border-black font-black uppercase">
-              Try Again
-            </Button>
-            <Button asChild variant="outline" className="border-4 border-black font-black uppercase">
+    <SurfaceCard>
+      <div className="flex items-start gap-4">
+        <AlertCircle className="mt-1 h-6 w-6 shrink-0 text-destructive" />
+        <div className="space-y-4">
+          <PageHeader
+            title="Could not reach GitHub"
+            subtitle={error ?? "The household repository could not be resolved right now."}
+          />
+          <ActionGroup>
+            <Button onClick={onRetry}>Try Again</Button>
+            <Button asChild variant="outline">
               <Link href="/">Go Home</Link>
             </Button>
-          </div>
+          </ActionGroup>
         </div>
       </div>
-    </div>
+    </SurfaceCard>
   );
 }
+
