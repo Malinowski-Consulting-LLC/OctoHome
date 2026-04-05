@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import {
   getRootAppearanceAttributes,
   getSystemColorSchemeFromPreference,
@@ -12,7 +12,7 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
   const selectedTheme = useAppearanceStore((state) => state.selectedTheme);
   const magicEnabled = useAppearanceStore((state) => state.magicEnabled);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (typeof window.matchMedia !== "function") {
       return;
     }
