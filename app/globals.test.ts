@@ -110,3 +110,64 @@ test("globals.css: no standalone aether light data-theme block (should be :root 
     "Aether light must use :root, not [data-theme='aether'][data-color-scheme='light']"
   );
 });
+
+test("globals.css: Aether dark block includes --ring-color override", () => {
+  // Extract the dark block content to assert the token is defined there, not just in :root
+  const darkBlockMatch = css.match(
+    /\[data-theme="aether"\]\[data-color-scheme="dark"\]\s*\{([^}]+)\}/s
+  );
+  assert.ok(darkBlockMatch, "Could not locate Aether dark block");
+  assert.ok(
+    darkBlockMatch[1].includes("--ring-color"),
+    "--ring-color must be overridden in the Aether dark block"
+  );
+});
+
+test("globals.css: reduced-effects budget covers .animate-beam", () => {
+  assert.match(
+    css,
+    /\[data-effects="reduced"\].*animate-beam/s,
+    ".animate-beam not covered by [data-effects='reduced'] rule"
+  );
+});
+
+test("globals.css: reduced-effects [data-magic-effect] clears filter and backdrop-filter", () => {
+  // The reduced-effects magic-effect rule must clear visual filters
+  const reducedMagicMatch = css.match(
+    /\[data-effects="reduced"\][^{]*\[data-magic-effect\][^{]*\{([^}]+)\}/s
+  );
+  assert.ok(
+    reducedMagicMatch,
+    "Could not locate [data-effects='reduced'] [data-magic-effect] rule block"
+  );
+  const block = reducedMagicMatch[1];
+  assert.match(
+    block,
+    /filter:\s*none/,
+    "filter: none missing from reduced-effects [data-magic-effect] rule"
+  );
+  assert.match(
+    block,
+    /backdrop-filter:\s*none/,
+    "backdrop-filter: none missing from reduced-effects [data-magic-effect] rule"
+  );
+});
+
+test("globals.css: @media prefers-reduced-motion: reduce disables approved animation surfaces", () => {
+  assert.match(
+    css,
+    /@media\s*\(prefers-reduced-motion:\s*reduce\)/,
+    "Missing @media (prefers-reduced-motion: reduce) block"
+  );
+  const mediaMatch = css.match(
+    /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{([\s\S]+?)^}/m
+  );
+  assert.ok(mediaMatch, "Could not extract prefers-reduced-motion block content");
+  const block = mediaMatch[1];
+  assert.ok(block.includes("animate-pulse-slow"), "animate-pulse-slow not in reduced-motion media query");
+  assert.ok(block.includes("animate-shimmer"), "animate-shimmer not in reduced-motion media query");
+  assert.ok(block.includes("animate-beam"), "animate-beam not in reduced-motion media query");
+  assert.ok(block.includes("data-magic-effect"), "[data-magic-effect] not in reduced-motion media query");
+  assert.match(block, /filter:\s*none/, "filter: none missing from reduced-motion media query");
+  assert.match(block, /backdrop-filter:\s*none/, "backdrop-filter: none missing from reduced-motion media query");
+});

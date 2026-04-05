@@ -84,6 +84,7 @@
   --text-2: #b4c1e2;
   --border-subtle: rgba(112, 132, 194, 0.18);
   --border-strong: rgba(255, 255, 255, 0.08);
+  --ring-color: #7c9dff;
   --interactive-bg: rgba(255, 255, 255, 0.06);
   --interactive-hover: rgba(255, 255, 255, 0.10);
   --accent-solid: #eef3ff;
@@ -117,9 +118,12 @@
 /* ─── Effect budget ───────────────────────────────────────────────────── */
 [data-effects="reduced"] .animate-pulse-slow,
 [data-effects="reduced"] .animate-shimmer,
+[data-effects="reduced"] .animate-beam,
 [data-effects="reduced"] [data-magic-effect] {
   animation: none !important;
   opacity: 1 !important;
+  filter: none !important;
+  backdrop-filter: none !important;
 }
 
 .hero-surface,
@@ -130,6 +134,19 @@
 [data-theme="high-contrast"] [data-magic-effect] {
   filter: none !important;
   backdrop-filter: none !important;
+}
+
+/* ─── Non-JS reduced-motion fallback ─────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-slow,
+  .animate-shimmer,
+  .animate-beam,
+  [data-magic-effect] {
+    animation: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+    backdrop-filter: none !important;
+  }
 }
 
 /* ─── Base layer ──────────────────────────────────────────────────────── */
