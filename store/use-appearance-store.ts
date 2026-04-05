@@ -20,6 +20,7 @@ const getInitialMagicEnabled = () => {
   if (typeof window === "undefined") return true;
 
   try {
+    // Legacy onboarding only seeds the first load; persisted appearance wins once present.
     return getLegacyMagicModePreference(localStorage.getItem(LEGACY_ONBOARDING_STORAGE_KEY));
   } catch {
     return true;

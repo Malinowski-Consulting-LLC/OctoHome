@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { runInNewContext } from "node:vm";
 import test from "node:test";
 
 import {
@@ -7,6 +8,7 @@ import {
   getLegacyMagicModePreference,
   normalizeStoredTheme,
   normalizeSystemColorScheme,
+  getSystemColorSchemeFromPreference,
   resolveAppearanceState,
 } from "./appearance.ts";
 
@@ -20,6 +22,14 @@ test("resolveAppearanceState uses system dark mode for Aether", () => {
   assert.deepEqual(state, {
     theme: "aether",
     colorScheme: "dark",
+    effectsMode: "full",
+  });
+});
+
+test("resolveAppearanceState defaults to aether light full", () => {
+  assert.deepEqual(resolveAppearanceState({}), {
+    theme: "aether",
+    colorScheme: "light",
     effectsMode: "full",
   });
 });
@@ -66,6 +76,43 @@ test("getAppearanceBootstrapScript includes safe fallback root attributes", () =
   assert.match(script, /setAttribute\("data-effects",\s*"full"\)/);
 });
 
+test("getAppearanceBootstrapScript applies persisted appearance state at runtime", () => {
+  const attrs: Record<string, string> = {};
+  const script = getAppearanceBootstrapScript();
+
+  runInNewContext(script, {
+    document: {
+      documentElement: {
+        setAttribute: (name: string, value: string) => {
+          attrs[name] = value;
+        },
+      },
+    },
+    localStorage: {
+      getItem: (key: string) => {
+        if (key === "octohome-appearance") {
+          return JSON.stringify({
+            state: {
+              selectedTheme: "high-contrast",
+              magicEnabled: false,
+            },
+          });
+        }
+        return null;
+      },
+    },
+    window: {
+      matchMedia: () => ({ matches: true }),
+    },
+  });
+
+  assert.deepEqual(attrs, {
+    "data-theme": "high-contrast",
+    "data-color-scheme": "light",
+    "data-effects": "reduced",
+  });
+});
+
 test("normalizeSystemColorScheme falls back to light when unavailable", () => {
   assert.equal(normalizeSystemColorScheme(undefined), "light");
 });
@@ -83,4 +130,9 @@ test("getRootAppearanceAttributes returns the root data attribute contract", () 
       "data-effects": "reduced",
     }
   );
+});
+
+test("getSystemColorSchemeFromPreference maps matchMedia state to the scheme", () => {
+  assert.equal(getSystemColorSchemeFromPreference(true), "dark");
+  assert.equal(getSystemColorSchemeFromPreference(false), "light");
 });

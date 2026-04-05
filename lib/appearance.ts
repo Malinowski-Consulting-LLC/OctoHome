@@ -20,6 +20,10 @@ export function normalizeSystemColorScheme(value: string | null | undefined): Co
   return value === "dark" ? "dark" : "light";
 }
 
+export function getSystemColorSchemeFromPreference(matches: boolean): ColorScheme {
+  return matches ? "dark" : "light";
+}
+
 export function normalizeStoredTheme(value: string | null | undefined): AppearanceTheme {
   return value === "high-contrast" ? "high-contrast" : "aether";
 }

@@ -2,7 +2,10 @@
 
 import type { ReactNode } from "react";
 import { useEffect } from "react";
-import { getRootAppearanceAttributes, normalizeSystemColorScheme } from "@/lib/appearance";
+import {
+  getRootAppearanceAttributes,
+  getSystemColorSchemeFromPreference,
+} from "@/lib/appearance";
 import { useAppearanceStore } from "@/store/use-appearance-store";
 
 export function AppearanceProvider({ children }: { children: ReactNode }) {
@@ -10,20 +13,35 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
   const magicEnabled = useAppearanceStore((state) => state.magicEnabled);
 
   useEffect(() => {
-    const systemScheme =
-      typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
-
-    const attrs = getRootAppearanceAttributes({
-      selectedTheme,
-      systemScheme: normalizeSystemColorScheme(systemScheme),
-      magicEnabled,
-    });
-
-    for (const [name, value] of Object.entries(attrs)) {
-      document.documentElement.setAttribute(name, value);
+    if (typeof window.matchMedia !== "function") {
+      return;
     }
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => {
+      const attrs = getRootAppearanceAttributes({
+        selectedTheme,
+        systemScheme: getSystemColorSchemeFromPreference(mediaQuery.matches),
+        magicEnabled,
+      });
+
+      for (const [name, value] of Object.entries(attrs)) {
+        document.documentElement.setAttribute(name, value);
+      }
+    };
+
+    apply();
+
+    if (selectedTheme !== "aether") {
+      return;
+    }
+
+    const handler = () => apply();
+    mediaQuery.addEventListener("change", handler);
+
+    return () => {
+      mediaQuery.removeEventListener("change", handler);
+    };
   }, [magicEnabled, selectedTheme]);
 
   return children;
