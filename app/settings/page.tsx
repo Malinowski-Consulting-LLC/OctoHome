@@ -3,119 +3,150 @@
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import Sidebar from "@/components/sidebar";
-import { Settings, Shield, Database, Github, LogOut, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Database, Github, LogOut, Settings, Shield } from "lucide-react";
+import { ActionGroup } from "@/components/action-group";
+import { AppearanceSettingsCard } from "@/components/appearance-settings-card";
+import { PageHeader } from "@/components/page-header";
+import { SurfaceCard } from "@/components/surface-card";
 import { useResolvedHomeRepo } from "@/lib/use-resolved-home-repo";
-import { useAppearanceStore } from "@/store/use-appearance-store";
+import { cn } from "@/lib/utils";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
+
+const actionClassName =
+  "inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-[color:var(--interactive-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring-color)] sm:w-auto";
+
+const infoPanelClassName =
+  "rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-2)] p-4 sm:p-5";
 
 export default function SettingsPage() {
   const { data: session } = useSession();
   const homeRepo = useResolvedHomeRepo();
   const { repoOwner, repoName } = homeRepo;
   const { isOrg, setGithubData } = useOnboardingStore();
-  const { magicEnabled, toggleMagicMode } = useAppearanceStore();
   const repoUrl = repoOwner && repoName ? `https://github.com/${repoOwner}/${repoName}` : null;
   const accountUrl = session?.user?.login
     ? `https://github.com/${session.user.login}`
     : null;
 
   return (
-    <div className="flex min-h-screen bg-zinc-50 font-sans">
+    <div className="flex min-h-screen bg-background font-sans text-foreground">
       <Sidebar />
-      <main className="flex-1 p-12 overflow-y-auto">
-        <header className="mb-12">
-          <h1 className="text-7xl font-black uppercase tracking-tighter flex items-center gap-6">
-            <Settings className="w-16 h-16" /> House Settings
-          </h1>
-          <p className="text-3xl font-bold text-zinc-500 mt-4 uppercase italic">
-            Manage your household OS connection.
-          </p>
-        </header>
+      <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
+        <div className="mx-auto flex max-w-5xl flex-col gap-6">
+          <PageHeader
+            title="House Settings"
+            subtitle="Choose how OctoHome looks and review the GitHub connection powering your household workspace."
+            actions={
+              <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] px-3 py-2 text-sm font-medium text-muted-foreground">
+                <Settings className="h-4 w-4" />
+                Household controls
+              </span>
+            }
+          />
 
-        <div className="max-w-5xl space-y-12">
-          {/* Accessibility */}
-          <section className="border-8 border-black p-12 bg-white shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
-            <h2 className="text-5xl font-black uppercase mb-10 flex items-center gap-6 italic">
-              <Sparkles className="w-12 h-12" /> Experience
-            </h2>
-            <div className="flex justify-between items-center bg-zinc-100 p-8 border-4 border-black">
-              <div>
-                <h3 className="text-3xl font-black uppercase tracking-tight">Magic Mode</h3>
-                <p className="text-xl font-bold text-zinc-500 uppercase italic mt-2">Enables fluid animations and visual depth.</p>
-              </div>
-              <button 
-                onClick={toggleMagicMode}
-                className={`w-24 h-12 border-4 border-black relative transition-colors ${magicEnabled ? 'bg-black' : 'bg-white'}`}
-              >
-                <div className={`absolute top-1 bottom-1 w-8 transition-all border-2 border-black ${magicEnabled ? 'right-1 bg-white' : 'left-1 bg-black'}`} />
-              </button>
-            </div>
-          </section>
+          <AppearanceSettingsCard />
 
-          {/* Repo Connection */}
-          <section className="border-8 border-black p-12 bg-zinc-50 shadow-[16px_16px_0px_0px_rgba(0,0,0,1)]">
-            <h2 className="text-4xl font-black uppercase mb-8 flex items-center gap-4">
-              <Database className="w-8 h-8" /> Data Connection
-            </h2>
-            <div className="space-y-6">
-              <div className="flex justify-between items-center border-b-4 border-black pb-6">
-                <div>
-                  <p className="text-sm font-black uppercase text-zinc-400">GitHub Repository</p>
-                  <p className="text-3xl font-black italic">{repoOwner && repoName ? `${repoOwner}/${repoName}` : "Not connected yet"}</p>
-                  <p className="mt-2 text-sm font-black uppercase text-zinc-500">
-                    To connect a different household repo, sign out and run onboarding again.
-                  </p>
+          <SurfaceCard aria-labelledby="repo-settings-heading" className="space-y-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="max-w-2xl">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Database className="h-4 w-4" />
+                  Repo connection
                 </div>
-                {repoUrl ? (
-                  <Button asChild variant="outline" className="border-4 border-black font-black uppercase">
-                    <a href={repoUrl} target="_blank" rel="noreferrer">
-                      Open Repo
-                    </a>
-                  </Button>
-                ) : null}
+                <h2 id="repo-settings-heading" className="mt-2 text-xl font-semibold text-foreground">
+                  Data Connection
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  OctoHome reads household tasks and state from your connected GitHub repository.
+                </p>
               </div>
-              <div className="flex justify-between items-center border-b-4 border-black pb-6">
-                <div>
-                  <p className="text-sm font-black uppercase text-zinc-400">Storage Type</p>
-                  <p className="text-3xl font-black italic">{isOrg ? "Organization" : "Personal Account"}</p>
+
+              {repoUrl ? (
+                <a href={repoUrl} target="_blank" rel="noreferrer" className={actionClassName}>
+                  Open Repo
+                </a>
+              ) : null}
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className={infoPanelClassName}>
+                <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  GitHub Repository
+                </p>
+                <p className="mt-3 break-all text-lg font-semibold text-foreground">
+                  {repoOwner && repoName ? `${repoOwner}/${repoName}` : "Not connected yet"}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  To connect a different household repo, sign out and run onboarding again.
+                </p>
+              </div>
+
+              <div className={infoPanelClassName}>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                      Storage Type
+                    </p>
+                    <p className="mt-3 text-lg font-semibold text-foreground">
+                      {isOrg ? "Organization" : "Personal Account"}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      Your onboarding choice determines whether OctoHome writes to an organization or personal repo.
+                    </p>
+                  </div>
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[color:var(--interactive-bg)] text-muted-foreground">
+                    <Shield className="h-5 w-5" />
+                  </div>
                 </div>
-                <Shield className="w-10 h-10" />
               </div>
             </div>
-          </section>
+          </SurfaceCard>
 
-          {/* Account */}
-          <section className="border-8 border-black p-12 bg-white">
-            <h2 className="text-4xl font-black uppercase mb-8 flex items-center gap-4">
-              <Github className="w-8 h-8" /> Connected Account
-            </h2>
-            <div className="flex items-center gap-8 mb-12">
+          <SurfaceCard aria-labelledby="account-settings-heading" className="space-y-6">
+            <div className="max-w-2xl">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Github className="h-4 w-4" />
+                Connected account
+              </div>
+              <h2 id="account-settings-heading" className="mt-2 text-xl font-semibold text-foreground">
+                GitHub identity
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                This account powers sign-in and links you back to GitHub when you need to manage the household repo.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               {session?.user?.image ? (
-                <img src={session.user.image} className="w-32 h-32 border-8 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]" alt="Avatar" />
+                <img
+                  src={session.user.image}
+                  className="h-20 w-20 rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-2)] object-cover"
+                  alt={session.user.name ?? "Profile photo"}
+                />
               ) : (
-                <div className="w-32 h-32 border-8 border-black bg-zinc-200 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]" />
+                <div className="h-20 w-20 rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-2)]" />
               )}
-              <div>
-                <p className="text-4xl font-black uppercase">{session?.user?.name}</p>
-                <p className="text-2xl font-bold text-zinc-500 italic">{session?.user?.email}</p>
+
+              <div className="min-w-0">
+                <p className="text-lg font-semibold text-foreground">{session?.user?.name}</p>
+                <p className="mt-1 break-all text-sm text-muted-foreground">{session?.user?.email}</p>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <ActionGroup>
               {accountUrl ? (
-                <Button asChild className="h-24 text-2xl font-black border-8 border-black bg-white text-black hover:bg-zinc-100 flex gap-4">
-                  <a href={accountUrl} target="_blank" rel="noreferrer">
-                    <Github className="w-8 h-8" /> OPEN GITHUB
-                  </a>
-                </Button>
+                <a href={accountUrl} target="_blank" rel="noreferrer" className={actionClassName}>
+                  <Github className="h-4 w-4" />
+                  Open GitHub
+                </a>
               ) : (
-                <Button asChild className="h-24 text-2xl font-black border-8 border-black bg-white text-black hover:bg-zinc-100 flex gap-4">
-                  <Link href="/">OPEN DASHBOARD</Link>
-                </Button>
+                <Link href="/" className={actionClassName}>
+                  Open Dashboard
+                </Link>
               )}
-              <Button
-                variant="destructive"
-                className="h-24 text-2xl font-black border-8 border-black flex gap-4"
+              <button
+                type="button"
+                className={cn(actionClassName, "text-destructive")}
                 onClick={() => {
                   setGithubData({
                     githubUsername: "",
@@ -126,14 +157,13 @@ export default function SettingsPage() {
                   void signOut({ callbackUrl: "/" });
                 }}
               >
-                <LogOut className="w-8 h-8" /> SIGN OUT
-              </Button>
-            </div>
-          </section>
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </button>
+            </ActionGroup>
+          </SurfaceCard>
 
-          <p className="text-center text-xl font-bold text-zinc-400 uppercase italic">
-            OctoHome • Powered by GitHub Issues
-          </p>
+          <p className="text-center text-sm text-muted-foreground">OctoHome • Powered by GitHub Issues</p>
         </div>
       </main>
     </div>
