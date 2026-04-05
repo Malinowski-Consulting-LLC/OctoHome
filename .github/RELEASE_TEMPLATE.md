@@ -34,4 +34,4 @@ None.
 
 **Full diff:** https://github.com/Malinowski-Consulting-LLC/OctoHome/compare/vPREV...vNEXT
 
-> ⚠️ Desktop binaries in this release are **unsigned**. See https://github.com/Malinowski-Consulting-LLC/OctoHome/blob/main/docs/RELEASE.md for code-signing and install details.
+> ⚠️ Desktop binaries in this release are **unsigned**. Windows may show a SmartScreen warning, and macOS users should right-click → Open on first launch.

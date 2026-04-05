@@ -161,7 +161,7 @@ src-tauri/     Desktop wrapper that targets the hosted OctoHome web app in produ
 
 ## Release process (high level)
 
-Deploy the web app to Vercel, then cut desktop releases from GitHub Actions. Semver tag pushes publish the release workflow, which builds unsigned Tauri desktop artifacts around the hosted app URL configured in the `APP_URL` Actions variable. `workflow_dispatch` is still available for on-demand CI validation without publishing a release. See `docs/RELEASE.md` for the exact runbook.
+Deploy the web app to Vercel, then cut desktop releases from GitHub Actions. Semver tag pushes publish the release workflow, which builds unsigned Tauri desktop artifacts around the hosted app URL configured in the `APP_URL` Actions variable. `workflow_dispatch` is still available for on-demand CI validation without publishing a release, and the release tag must exactly match the shared app version.
 
 ## Current status and caveats
 

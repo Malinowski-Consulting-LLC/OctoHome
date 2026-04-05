@@ -37,10 +37,12 @@ jobs:
         env:
           # lib/env.ts validates these at module-load time via Zod.
           # A clean runner has no .env.local, so they must be injected explicitly.
+          # GitHub reserves the GITHUB_* prefix for system use, so the repository
+          # secrets must be named GH_ID / GH_SECRET instead.
           # Set them at: Settings → Secrets and variables → Actions → Secrets
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-          GITHUB_ID: ${{ secrets.GITHUB_ID }}
-          GITHUB_SECRET: ${{ secrets.GITHUB_SECRET }}
+          GH_ID: ${{ secrets.GH_ID }}
+          GH_SECRET: ${{ secrets.GH_SECRET }}
           # APP_URL is intentionally omitted: it is optional in the Zod schema
           # (undefined passes; an empty string from an unset variable would fail).
 
@@ -53,7 +55,7 @@ jobs:
           TAURI=$(node -p "require('./src-tauri/tauri.conf.json').version")
           if [ "$PKG" != "$CARGO" ] || [ "$PKG" != "$TAURI" ]; then
             echo "::error::Version mismatch — package.json: $PKG | Cargo.toml: $CARGO | tauri.conf.json: $TAURI"
-            echo "All three files must have the same version. See docs/RELEASE.md §1."
+            echo "All three files must have the same version before cutting a release tag."
             exit 1
           fi
           echo "✓ Versions aligned: $PKG"
@@ -61,7 +63,7 @@ jobs:
   # ── Build and publish desktop artifacts ───────────────────────────────────
   # Triggers only on semver tag pushes (refs/tags/v*) for production releases.
   #
-  # Produces UNSIGNED binaries. See docs/RELEASE.md §4 for details.
+  # Produces UNSIGNED binaries.
   release:
     name: Release desktop (${{ matrix.platform }})
     needs: ci
@@ -162,7 +164,7 @@ jobs:
           releaseBody: |
             ## OctoHome v__VERSION__
 
-            > ⚠️ These binaries are **unsigned**. See the release runbook: https://github.com/Malinowski-Consulting-LLC/OctoHome/blob/main/docs/RELEASE.md
+            > ⚠️ These binaries are **unsigned**. Review the platform-specific installation notes below before first launch.
 
             ### Installation
             - **Windows** — run the `.msi` or `-setup.exe` installer; click "More info → Run anyway" if SmartScreen warns

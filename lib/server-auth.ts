@@ -1,19 +1,11 @@
-import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 
+import { getGitHubJwt } from "./auth-token";
 import { UnauthorizedError } from "@/lib/api-errors";
 import { serverEnv } from "@/lib/env";
 
-type GitHubJwt = {
-  accessToken?: string;
-  login?: string;
-};
-
 export async function getGitHubAuthContext(request: NextRequest) {
-  const token = (await getToken({
-    req: request,
-    secret: serverEnv.AUTH_SECRET,
-  })) as GitHubJwt | null;
+  const token = await getGitHubJwt(request, serverEnv.AUTH_SECRET);
 
   return {
     accessToken: typeof token?.accessToken === "string" ? token.accessToken : null,

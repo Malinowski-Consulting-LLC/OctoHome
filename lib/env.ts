@@ -9,8 +9,8 @@ const serverEnvSchema = z.object({
 
 const parsedServerEnv = serverEnvSchema.safeParse({
   AUTH_SECRET: process.env.AUTH_SECRET,
-  GITHUB_ID: process.env.GITHUB_ID,
-  GITHUB_SECRET: process.env.GITHUB_SECRET,
+  GITHUB_ID: process.env.GITHUB_ID ?? process.env.GH_ID,
+  GITHUB_SECRET: process.env.GITHUB_SECRET ?? process.env.GH_SECRET,
   APP_URL: process.env.APP_URL,
 });
 
