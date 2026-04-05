@@ -164,6 +164,20 @@ test("BoardColumnShell is backed by SurfaceCard (has surface-1 token)", () => {
   assert.ok(html.includes("surface-1"), `Expected surface-1 from SurfaceCard backing`);
 });
 
+test("BoardColumnShell count badge uses token-backed pill (interactive-bg + muted-foreground)", () => {
+  const html = renderToStaticMarkup(
+    React.createElement(BoardColumnShell, { title: "T", count: 5 }, "x")
+  );
+  assert.ok(
+    html.includes("interactive-bg"),
+    `Expected interactive-bg token on count pill, got: ${html}`
+  );
+  assert.ok(
+    html.includes("muted-foreground"),
+    `Expected muted-foreground token on count pill, got: ${html}`
+  );
+});
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 
 console.log(`\n${passed} passed, ${failed} failed`);

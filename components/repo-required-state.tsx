@@ -23,8 +23,11 @@ export default function RepoRequiredState({
   if (status === "auth-loading" || status === "loading") {
     return (
       <SurfaceCard>
-        <div className="flex items-center gap-4">
-          <Loader2 className="h-6 w-6 shrink-0 animate-spin text-muted-foreground" />
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Connecting…</span>
+          </div>
           <PageHeader
             title="Loading your home"
             subtitle="Checking your GitHub connection and household repository."
