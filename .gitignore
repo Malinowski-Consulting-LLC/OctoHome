@@ -2,9 +2,11 @@
 .next/
 .env
 .env.local
-.superpowers/
+designs/
+plans/
 out/
 build/
 dist/
 *.log
 .serena/
+.worktrees/
