@@ -9,21 +9,17 @@ import {
   resolveAppearanceState,
 } from "./appearance.ts";
 
-const createStorage = (value?: string) => ({
-  getItem: () => value ?? null,
-});
-
 test("resolveAppearanceState uses system dark mode for Aether", () => {
   const state = resolveAppearanceState({
-    storedTheme: "aether",
+    selectedTheme: "aether",
     magicEnabled: true,
-    systemColorScheme: "dark",
+    systemScheme: "dark",
   });
 
   assert.deepEqual(state, {
     theme: "aether",
     colorScheme: "dark",
-    effectsMode: "magic",
+    effectsMode: "full",
   });
 });
 
@@ -33,9 +29,9 @@ test("normalizeStoredTheme falls back to aether on invalid values", () => {
 
 test("resolveAppearanceState keeps high contrast explicit and reduces effects when magic is off", () => {
   const state = resolveAppearanceState({
-    storedTheme: "high-contrast",
+    selectedTheme: "high-contrast",
     magicEnabled: false,
-    systemColorScheme: "dark",
+    systemScheme: "dark",
   });
 
   assert.deepEqual(state, {
@@ -46,9 +42,7 @@ test("resolveAppearanceState keeps high contrast explicit and reduces effects wh
 });
 
 test("getLegacyMagicModePreference reads magicEnabled from onboarding storage", () => {
-  const storage = createStorage(JSON.stringify({ magicEnabled: false }));
-
-  assert.equal(getLegacyMagicModePreference(storage), false);
+  assert.equal(getLegacyMagicModePreference(JSON.stringify({ state: { magicEnabled: false } })), false);
 });
 
 test("getLegacyMagicModePreference falls back to true when storage is missing", () => {
@@ -56,15 +50,11 @@ test("getLegacyMagicModePreference falls back to true when storage is missing", 
 });
 
 test("getLegacyMagicModePreference falls back to true for malformed JSON", () => {
-  const storage = createStorage("{");
-
-  assert.equal(getLegacyMagicModePreference(storage), true);
+  assert.equal(getLegacyMagicModePreference("{"), true);
 });
 
 test("getLegacyMagicModePreference falls back to true when magicEnabled is absent", () => {
-  const storage = createStorage(JSON.stringify({ step: 2 }));
-
-  assert.equal(getLegacyMagicModePreference(storage), true);
+  assert.equal(getLegacyMagicModePreference(JSON.stringify({ state: { step: 2 } })), true);
 });
 
 test("getAppearanceBootstrapScript includes safe fallback root attributes", () => {
@@ -72,7 +62,7 @@ test("getAppearanceBootstrapScript includes safe fallback root attributes", () =
 
   assert.match(script, /setAttribute\("data-theme",\s*"aether"\)/);
   assert.match(script, /setAttribute\("data-color-scheme",\s*"light"\)/);
-  assert.match(script, /setAttribute\("data-effects-mode",\s*"reduced"\)/);
+  assert.match(script, /setAttribute\("data-effects",\s*"full"\)/);
 });
 
 test("normalizeSystemColorScheme falls back to light when unavailable", () => {

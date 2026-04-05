@@ -1,6 +1,6 @@
-export type AppearanceTheme = "aether" | "light" | "dark" | "high-contrast";
+export type AppearanceTheme = "aether" | "high-contrast";
 export type ColorScheme = "light" | "dark";
-export type EffectsMode = "magic" | "reduced";
+export type EffectsMode = "full" | "reduced";
 
 export type ResolvedAppearanceState = {
   theme: AppearanceTheme;
@@ -8,45 +8,32 @@ export type ResolvedAppearanceState = {
   effectsMode: EffectsMode;
 };
 
-const APPEARANCE_THEMES: readonly AppearanceTheme[] = ["aether", "light", "dark", "high-contrast"];
-
 export function normalizeSystemColorScheme(value: string | null | undefined): ColorScheme {
   return value === "dark" ? "dark" : "light";
 }
 
 export function normalizeStoredTheme(value: string | null | undefined): AppearanceTheme {
-  return APPEARANCE_THEMES.includes(value as AppearanceTheme) ? (value as AppearanceTheme) : "aether";
+  return value === "high-contrast" ? "high-contrast" : "aether";
 }
 
-export function getLegacyMagicModePreference(
-  storage?: Pick<Storage, "getItem"> | null
-): boolean {
-  if (!storage) return true;
-
+export function getLegacyMagicModePreference(rawStorage?: string | null): boolean {
+  if (!rawStorage) return true;
   try {
-    const raw = storage.getItem("octohome-onboarding");
-    if (!raw) return true;
-
-    const parsed = JSON.parse(raw) as { magicEnabled?: unknown };
-    return typeof parsed.magicEnabled === "boolean" ? parsed.magicEnabled : true;
+    const parsed = JSON.parse(rawStorage) as { state?: { magicEnabled?: unknown } };
+    return typeof parsed.state?.magicEnabled === "boolean" ? parsed.state.magicEnabled : true;
   } catch {
     return true;
   }
 }
 
 export function resolveAppearanceState(input: {
-  storedTheme?: string | null;
+  selectedTheme?: string | null;
+  systemScheme?: string | null;
   magicEnabled?: boolean;
-  systemColorScheme?: string | null;
 } = {}): ResolvedAppearanceState {
-  const theme = normalizeStoredTheme(input.storedTheme);
-  const colorScheme =
-    theme === "aether"
-      ? normalizeSystemColorScheme(input.systemColorScheme)
-      : theme === "dark"
-        ? "dark"
-        : "light";
-  const effectsMode: EffectsMode = input.magicEnabled === false || theme === "high-contrast" ? "reduced" : "magic";
+  const theme = normalizeStoredTheme(input.selectedTheme);
+  const colorScheme = theme === "aether" ? normalizeSystemColorScheme(input.systemScheme) : "light";
+  const effectsMode: EffectsMode = input.magicEnabled === false ? "reduced" : "full";
 
   return { theme, colorScheme, effectsMode };
 }
@@ -56,24 +43,21 @@ export function getAppearanceBootstrapScript(): string {
   const root = document.documentElement;
   root.setAttribute("data-theme", "aether");
   root.setAttribute("data-color-scheme", "light");
-  root.setAttribute("data-effects-mode", "reduced");
+  root.setAttribute("data-effects", "full");
 
   try {
     const storedTheme = localStorage.getItem("octohome-appearance-theme");
     const onboarding = localStorage.getItem("octohome-onboarding");
     const parsed = onboarding ? JSON.parse(onboarding) : undefined;
-    const magicEnabled = typeof parsed?.magicEnabled === "boolean" ? parsed.magicEnabled : true;
-    const theme = storedTheme === "aether" || storedTheme === "light" || storedTheme === "dark" || storedTheme === "high-contrast"
-      ? storedTheme
-      : "aether";
+    const magicEnabled = typeof parsed?.state?.magicEnabled === "boolean" ? parsed.state.magicEnabled : true;
+    const theme = storedTheme === "high-contrast" ? "high-contrast" : "aether";
     const prefersDark = typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const colorScheme =
-      theme === "aether" ? (prefersDark ? "dark" : "light") : theme === "dark" ? "dark" : "light";
-    const effectsMode = !magicEnabled || theme === "high-contrast" ? "reduced" : "magic";
+    const colorScheme = theme === "aether" ? (prefersDark ? "dark" : "light") : "light";
+    const effectsMode = magicEnabled === false ? "reduced" : "full";
 
     root.setAttribute("data-theme", theme);
     root.setAttribute("data-color-scheme", colorScheme);
-    root.setAttribute("data-effects-mode", effectsMode);
+    root.setAttribute("data-effects", effectsMode);
   } catch {
   }
 })();`;
