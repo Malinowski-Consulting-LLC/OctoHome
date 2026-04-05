@@ -1,8 +1,16 @@
 # OctoHome
+Provided by [Malinowski Consulting, LLC](https://malinowski.consulting).
 
-OctoHome turns GitHub into a household operating system. It uses GitHub sign-in, issues, labels, collaborators, Actions, and lightweight repo data to help a family manage chores, recurring routines, and day-to-day home operations.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FMalinowski-Consulting-LLC%2FOctoHome)
+Proof of concept for a GitHub-backed home management system.
+
+Based on the idea that GitHub's features can be repurposed for home management, and that families might enjoy a bit of octocat magic in their daily routines. [Read more](https://github.com/social-impact/insights/perspectives/03-17-2026-github-for-everyone)
+
+Create your home-ops repo and get started today! 
+
+[![Launch App](https://img.shields.io/badge/Launch-OctoHome-blue?style=for-the-badge&logo=github)](https://octo-home.vercel.app/)
+
+Powered by GitHub, designed for households.
 
 ## What OctoHome does
 
@@ -34,7 +42,7 @@ OctoHome turns GitHub into a household operating system. It uses GitHub sign-in,
 - **Zustand** for client-side onboarding and app state
 - **Tauri** desktop wrapper under `src-tauri/` that loads the hosted OctoHome web app in production
 
-## Deploying to production (Vercel)
+## Deploying to production (Vercel), if you want to self-host
 
 ### One-click deploy
 
