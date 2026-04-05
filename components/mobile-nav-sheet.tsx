@@ -10,7 +10,11 @@ import { signOut, useSession } from "next-auth/react";
 
 import { cn } from "@/lib/utils";
 
-import { isNavItemActive, sidebarNavItems } from "./sidebar-nav";
+import {
+  isNavItemActive,
+  mobileNavTriggerPlacementClassName,
+  sidebarNavItems,
+} from "./sidebar-nav";
 
 export default function MobileNavSheet() {
   const pathname = usePathname();
@@ -25,7 +29,10 @@ export default function MobileNavSheet() {
         <button
           type="button"
           aria-label="Open navigation menu"
-          className="fixed left-4 top-4 z-40 inline-flex size-12 items-center justify-center rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] text-foreground shadow-[var(--shadow-card)] backdrop-blur-xl transition-colors hover:bg-[color:var(--interactive-hover)] focus:outline-none focus:ring-4 focus:ring-[color:var(--ring-color)] md:hidden"
+          className={cn(
+            mobileNavTriggerPlacementClassName,
+            "z-40 inline-flex size-12 items-center justify-center rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] text-foreground shadow-[var(--shadow-card)] backdrop-blur-xl transition-colors hover:bg-[color:var(--interactive-hover)] focus:outline-none focus:ring-4 focus:ring-[color:var(--ring-color)] md:hidden"
+          )}
         >
           <Menu className="size-5" />
         </button>

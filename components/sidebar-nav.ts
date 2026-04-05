@@ -23,6 +23,8 @@ export const sidebarNavItems: SidebarNavItem[] = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
+export const mobileNavTriggerPlacementClassName = "fixed bottom-4 right-4";
+
 export function isNavItemActive(pathname: string | null | undefined, href: string) {
   if (!pathname) {
     return false;
