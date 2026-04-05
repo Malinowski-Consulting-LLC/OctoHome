@@ -1,24 +1,29 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+
+import { createApiErrorResponse } from "@/lib/api-errors";
 import { createTask } from "@/lib/github";
+import { requireGitHubAccessToken } from "@/lib/server-auth";
+
+const aiPromptSchema = z.object({
+  prompt: z.string().trim().min(1).max(500),
+  repoOwner: z.string().trim().min(1).max(100).regex(/^[A-Za-z0-9_.-]+$/),
+  repoName: z.string().trim().min(1).max(100).regex(/^[A-Za-z0-9_.-]+$/),
+});
 
 /**
  * AI Family Copilot API
  * Parses natural language into GitHub Issues.
  */
-export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.accessToken) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export async function POST(req: NextRequest) {
   try {
-    const { prompt, repoOwner, repoName } = await req.json();
+    const accessToken = await requireGitHubAccessToken(req);
+    const { prompt, repoOwner, repoName } = aiPromptSchema.parse(await req.json());
 
     // 1. MOCK PARSING (Real implementation would use OpenAI/Grok)
     // "Add a task to buy milk and eggs for Saturday dinner"
     const lowerPrompt = prompt.toLowerCase();
-    
+
     let title = prompt;
     let label = "Maintenance"; // Default
 
@@ -38,7 +43,7 @@ export async function POST(req: Request) {
 
     // 2. Create the Issue
     const issue = await createTask(
-      session.accessToken,
+      accessToken,
       repoOwner,
       repoName,
       title,
@@ -46,15 +51,13 @@ export async function POST(req: Request) {
       [label]
     );
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       issueNumber: issue.number,
       title,
-      label
+      label,
     });
-
-  } catch (error: any) {
-    console.error(error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    return createApiErrorResponse(error);
   }
 }

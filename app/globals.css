@@ -1,8 +1,22 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 @theme {
+  --font-sans: var(--font-atkinson), ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: #ffffff;
+  --color-foreground: #000000;
+  --color-primary: #000000;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f4f4f5;
+  --color-secondary-foreground: #18181b;
+  --color-accent: #004a99;
+  --color-accent-foreground: #ffffff;
+  --color-border: #000000;
+
+  --radius-lg: 1rem;
+  --radius-md: 0.75rem;
+  --radius-sm: 0.5rem;
+
   --animate-beam: beam 3s infinite;
   --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   --animate-shimmer: shimmer 2s linear infinite;
@@ -52,7 +66,7 @@
   }
   body {
     @apply bg-background text-foreground font-sans;
-    font-family: 'Atkinson Hyperlegible', sans-serif;
+    font-family: var(--font-atkinson), sans-serif;
   }
 }
 

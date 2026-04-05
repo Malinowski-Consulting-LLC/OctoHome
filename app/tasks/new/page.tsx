@@ -1,18 +1,17 @@
 "use client";
 
-import { useSession } from "next-auth/react";
-import { useOnboardingStore } from "@/store/use-onboarding-store";
 import Sidebar from "@/components/sidebar";
+import RepoRequiredState from "@/components/repo-required-state";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { createTask } from "@/lib/github";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import { useResolvedHomeRepo } from "@/lib/use-resolved-home-repo";
 
 const taskSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -25,10 +24,10 @@ type TaskFormValues = z.infer<typeof taskSchema>;
 const DEFAULT_LABELS = ["Groceries", "Bills", "Maintenance", "School", "Health", "Urgent"];
 
 export default function NewTaskPage() {
-  const { data: session } = useSession();
-  const { repoOwner, repoName } = useOnboardingStore();
+  const { status, error: repoError, refresh, repoOwner, repoName } = useResolvedHomeRepo();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
     register,
@@ -45,25 +44,40 @@ export default function NewTaskPage() {
 
   const selectedLabel = watch("label");
 
+  if (status !== "ready") {
+    return (
+      <div className="flex min-h-screen bg-white">
+        <Sidebar />
+        <main className="flex-1 p-12 overflow-y-auto">
+          <RepoRequiredState status={status} error={repoError} onRetry={refresh} />
+        </main>
+      </div>
+    );
+  }
+
   const onSubmit = async (values: TaskFormValues) => {
-    if (session?.accessToken && repoOwner && repoName) {
-      const token = session.accessToken;
-      setIsSubmitting(true);
-      try {
-        await createTask(
-          token,
-          repoOwner,
-          repoName,
-          values.title,
-          values.description || "Created via OctoHome",
-          [values.label]
-        );
-        router.push("/tasks");
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setIsSubmitting(false);
-      }
+    if (!repoOwner || !repoName) return;
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          owner: repoOwner,
+          repo: repoName,
+          title: values.title,
+          body: values.description || "Created via OctoHome",
+          labels: [values.label],
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Failed to create task");
+      router.push("/tasks");
+    } catch (err) {
+      setSubmitError((err as Error).message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -118,12 +132,15 @@ export default function NewTaskPage() {
           <Button 
             type="submit" 
             size="lg" 
-            disabled={isSubmitting}
+            disabled={isSubmitting || !repoOwner || !repoName}
             className="w-full h-24 text-3xl font-black border-8 border-black"
           >
             {isSubmitting ? <Loader2 className="w-10 h-10 animate-spin mr-4" /> : <Save className="w-10 h-10 mr-4" />}
             SAVE TASK
           </Button>
+          {submitError && (
+            <p className="text-red-600 font-bold text-xl uppercase">{submitError}</p>
+          )}
         </form>
       </main>
     </div>

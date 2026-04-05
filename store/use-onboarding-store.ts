@@ -1,17 +1,23 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-interface OnboardingState {
+/** Data-only fields persisted to storage. Excludes store action methods. */
+export type OnboardingData = {
   step: number;
   githubUsername: string;
   householdName: string;
-  repoOwner: string; // User or Org
+  repoOwner: string;
   repoName: string;
   isOrg: boolean;
+  /** GitHub organization login (required when isOrg is true). */
+  orgLogin: string;
   invitedMembers: string[];
   magicEnabled: boolean;
+};
+
+interface OnboardingState extends OnboardingData {
   setStep: (step: number) => void;
-  setGithubData: (data: Partial<OnboardingState>) => void;
+  setGithubData: (data: Partial<OnboardingData>) => void;
   addInvitedMember: (username: string) => void;
   toggleMagic: () => void;
 }
@@ -23,16 +29,18 @@ export const useOnboardingStore = create<OnboardingState>()(
       githubUsername: "",
       householdName: "",
       repoOwner: "",
-      repoName: "home-ops",
+      repoName: "",
       isOrg: false,
+      orgLogin: "",
       invitedMembers: [],
       magicEnabled: true,
       setStep: (step) => set({ step }),
       setGithubData: (data) => set((state) => ({ ...state, ...data })),
       addInvitedMember: (username) =>
-        set((state) => ({
-          invitedMembers: [...state.invitedMembers, username],
-        })),
+        set((state) => {
+          if (state.invitedMembers.includes(username)) return state;
+          return { invitedMembers: [...state.invitedMembers, username] };
+        }),
       toggleMagic: () => set((state) => ({ magicEnabled: !state.magicEnabled })),
     }),
     {

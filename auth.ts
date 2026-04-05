@@ -1,11 +1,14 @@
 import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
 
+import { serverEnv } from "@/lib/env";
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  secret: serverEnv.AUTH_SECRET,
   providers: [
     GitHub({
-      clientId: process.env.GITHUB_ID,
-      clientSecret: process.env.GITHUB_SECRET,
+      clientId: serverEnv.GITHUB_ID,
+      clientSecret: serverEnv.GITHUB_SECRET,
       authorization: {
         params: {
           scope: "repo read:user user:email workflow",
@@ -29,9 +32,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      if (typeof token.accessToken === "string") {
-        session.accessToken = token.accessToken;
-      }
       if (typeof token.login === "string") {
         session.user = { ...session.user, login: token.login };
       }

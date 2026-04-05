@@ -1,14 +1,22 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import Link from "next/link";
+import { signOut, useSession } from "next-auth/react";
 import Sidebar from "@/components/sidebar";
-import { Settings, Shield, Database, Github, LogOut, Bell, Sparkles } from "lucide-react";
+import { Settings, Shield, Database, Github, LogOut, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
+import { useResolvedHomeRepo } from "@/lib/use-resolved-home-repo";
 
 export default function SettingsPage() {
   const { data: session } = useSession();
-  const { repoOwner, repoName, isOrg, magicEnabled, toggleMagic } = useOnboardingStore();
+  const homeRepo = useResolvedHomeRepo();
+  const { repoOwner, repoName } = homeRepo;
+  const { isOrg, magicEnabled, toggleMagic, setGithubData } = useOnboardingStore();
+  const repoUrl = repoOwner && repoName ? `https://github.com/${repoOwner}/${repoName}` : null;
+  const accountUrl = session?.user?.login
+    ? `https://github.com/${session.user.login}`
+    : null;
 
   return (
     <div className="flex min-h-screen bg-zinc-50 font-sans">
@@ -52,9 +60,18 @@ export default function SettingsPage() {
               <div className="flex justify-between items-center border-b-4 border-black pb-6">
                 <div>
                   <p className="text-sm font-black uppercase text-zinc-400">GitHub Repository</p>
-                  <p className="text-3xl font-black italic">{repoOwner}/{repoName}</p>
+                  <p className="text-3xl font-black italic">{repoOwner && repoName ? `${repoOwner}/${repoName}` : "Not connected yet"}</p>
+                  <p className="mt-2 text-sm font-black uppercase text-zinc-500">
+                    To connect a different household repo, sign out and run onboarding again.
+                  </p>
                 </div>
-                <Button variant="outline" className="border-4 border-black font-black uppercase">Change Repo</Button>
+                {repoUrl ? (
+                  <Button asChild variant="outline" className="border-4 border-black font-black uppercase">
+                    <a href={repoUrl} target="_blank" rel="noreferrer">
+                      Open Repo
+                    </a>
+                  </Button>
+                ) : null}
               </div>
               <div className="flex justify-between items-center border-b-4 border-black pb-6">
                 <div>
@@ -72,24 +89,48 @@ export default function SettingsPage() {
               <Github className="w-8 h-8" /> Connected Account
             </h2>
             <div className="flex items-center gap-8 mb-12">
-              <img src={session?.user?.image || ""} className="w-32 h-32 border-8 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]" alt="Avatar" />
+              {session?.user?.image ? (
+                <img src={session.user.image} className="w-32 h-32 border-8 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]" alt="Avatar" />
+              ) : (
+                <div className="w-32 h-32 border-8 border-black bg-zinc-200 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]" />
+              )}
               <div>
                 <p className="text-4xl font-black uppercase">{session?.user?.name}</p>
                 <p className="text-2xl font-bold text-zinc-500 italic">{session?.user?.email}</p>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Button className="h-24 text-2xl font-black border-8 border-black bg-white text-black hover:bg-zinc-100 flex gap-4">
-                <Bell className="w-8 h-8" /> NOTIFICATIONS
-              </Button>
-              <Button variant="destructive" className="h-24 text-2xl font-black border-8 border-black flex gap-4">
+              {accountUrl ? (
+                <Button asChild className="h-24 text-2xl font-black border-8 border-black bg-white text-black hover:bg-zinc-100 flex gap-4">
+                  <a href={accountUrl} target="_blank" rel="noreferrer">
+                    <Github className="w-8 h-8" /> OPEN GITHUB
+                  </a>
+                </Button>
+              ) : (
+                <Button asChild className="h-24 text-2xl font-black border-8 border-black bg-white text-black hover:bg-zinc-100 flex gap-4">
+                  <Link href="/">OPEN DASHBOARD</Link>
+                </Button>
+              )}
+              <Button
+                variant="destructive"
+                className="h-24 text-2xl font-black border-8 border-black flex gap-4"
+                onClick={() => {
+                  setGithubData({
+                    githubUsername: "",
+                    repoOwner: "",
+                    repoName: "",
+                    householdName: "",
+                  });
+                  void signOut({ callbackUrl: "/" });
+                }}
+              >
                 <LogOut className="w-8 h-8" /> SIGN OUT
               </Button>
             </div>
           </section>
 
           <p className="text-center text-xl font-bold text-zinc-400 uppercase italic">
-            OctoHome Version 1.0.0 • Powered by GitHub Issues
+            OctoHome • Powered by GitHub Issues
           </p>
         </div>
       </main>

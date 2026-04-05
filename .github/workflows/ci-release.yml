@@ -1,0 +1,178 @@
+name: CI and Release
+
+on:
+  push:
+    branches: ["main"]
+    tags:
+      # Glob-style pattern (minimatch, NOT regex): v1.2.3, v1.2.3-beta.1, etc.
+      - 'v[0-9]*.[0-9]*.[0-9]*'
+  pull_request:
+    branches: ["main"]
+  # workflow_dispatch allows a maintainer to re-run CI checks on demand.
+  # Public GitHub releases are only published from semver tag pushes.
+  workflow_dispatch:
+
+jobs:
+  # ── Lint + build the Next.js web app ──────────────────────────────────────
+  ci:
+    name: Lint and build web app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build Next.js app
+        run: npm run build
+        env:
+          # lib/env.ts validates these at module-load time via Zod.
+          # A clean runner has no .env.local, so they must be injected explicitly.
+          # Set them at: Settings → Secrets and variables → Actions → Secrets
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+          GITHUB_ID: ${{ secrets.GITHUB_ID }}
+          GITHUB_SECRET: ${{ secrets.GITHUB_SECRET }}
+          # APP_URL is intentionally omitted: it is optional in the Zod schema
+          # (undefined passes; an empty string from an unset variable would fail).
+
+      # Ensure package.json, Cargo.toml and tauri.conf.json always agree.
+      # This catches version drift before a tag is pushed.
+      - name: Validate version alignment
+        run: |
+          PKG=$(node -p "require('./package.json').version")
+          CARGO=$(grep '^version' src-tauri/Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          TAURI=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          if [ "$PKG" != "$CARGO" ] || [ "$PKG" != "$TAURI" ]; then
+            echo "::error::Version mismatch — package.json: $PKG | Cargo.toml: $CARGO | tauri.conf.json: $TAURI"
+            echo "All three files must have the same version. See docs/RELEASE.md §1."
+            exit 1
+          fi
+          echo "✓ Versions aligned: $PKG"
+
+  # ── Build and publish desktop artifacts ───────────────────────────────────
+  # Triggers only on semver tag pushes (refs/tags/v*) for production releases.
+  #
+  # Produces UNSIGNED binaries. See docs/RELEASE.md §4 for details.
+  release:
+    name: Release desktop (${{ matrix.platform }})
+    needs: ci
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS: build separate binaries for Apple Silicon and Intel
+          - platform: macos-latest
+            args: '--target aarch64-apple-darwin'
+          - platform: macos-latest
+            args: '--target x86_64-apple-darwin'
+          - platform: ubuntu-22.04
+            args: ''
+          - platform: windows-latest
+            args: ''
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'npm'
+
+      # Fail fast before spending minutes on a Rust compile if APP_URL is absent.
+      # APP_URL is a repository variable (not a secret):
+      #   Settings → Secrets and variables → Actions → Variables → APP_URL
+      #   Example: https://octohome.vercel.app
+      - name: Validate APP_URL is set
+        run: |
+          if [ -z "$APP_URL" ]; then
+            echo "::error::APP_URL repository variable is not set."
+            echo "Add it at: Settings → Secrets and variables → Actions → Variables → New repository variable"
+            echo "Value should be the canonical deployed URL, e.g. https://octohome.vercel.app"
+            exit 1
+          fi
+          echo "✓ APP_URL is set"
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+        shell: bash
+
+      # On tag pushes, the tag must match the app version (caught before a long build).
+      - name: Validate tag matches app version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME (stripped: $TAG_VERSION) does not match package.json version $PKG_VERSION."
+            echo "Bump the version in package.json, src-tauri/Cargo.toml, and src-tauri/tauri.conf.json, then retag."
+            exit 1
+          fi
+          echo "✓ Tag matches app version: $PKG_VERSION"
+        shell: bash
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          # macOS cross-compilation targets; ignored on other platforms
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      # Tauri 2 requires webkit2gtk-4.1 on Linux (not the older 4.0 package).
+      # libgtk-3-dev is pulled in transitively by webkit2gtk-4.1-dev but listed
+      # explicitly for clarity.
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      # tagName uses __VERSION__ so tauri-action resolves the version from
+      # tauri.conf.json automatically. On tag pushes the resolved tag matches
+      # github.ref_name (validated above).
+      - name: Build and publish Tauri app
+        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0.6.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Embedded at compile time into the Rust binary by env!("APP_URL").
+          # If this is empty the build will fail at the Rust compile step.
+          APP_URL: ${{ vars.APP_URL }}
+        with:
+          tagName: 'v__VERSION__'
+          releaseName: 'OctoHome v__VERSION__'
+          releaseBody: |
+            ## OctoHome v__VERSION__
+
+            > ⚠️ These binaries are **unsigned**. See the release runbook: https://github.com/Malinowski-Consulting-LLC/OctoHome/blob/main/docs/RELEASE.md
+
+            ### Installation
+            - **Windows** — run the `.msi` or `-setup.exe` installer; click "More info → Run anyway" if SmartScreen warns
+            - **macOS (Apple Silicon)** — use the `aarch64` `.dmg`; right-click → Open on first launch to bypass Gatekeeper
+            - **macOS (Intel)** — use the `x86_64` `.dmg`; same Gatekeeper note applies
+            - **Linux** — use the `.AppImage` (`chmod +x` it), `.deb`, or `.rpm`
+
+            ### Release notes
+            Maintainers can start from: https://github.com/Malinowski-Consulting-LLC/OctoHome/blob/main/.github/RELEASE_TEMPLATE.md
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
+

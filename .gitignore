@@ -10,3 +10,5 @@ dist/
 *.log
 .serena/
 .worktrees/
+tsconfig.tsbuildinfo
+network-log.txt

@@ -2,10 +2,11 @@
 
 import { useState, useRef, useEffect } from "react";
 import Sidebar from "@/components/sidebar";
+import RepoRequiredState from "@/components/repo-required-state";
 import { Sparkles, Send, Bot, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useOnboardingStore } from "@/store/use-onboarding-store";
 import { EnergyOrb } from "@/components/magic/energy-orb";
+import { useResolvedHomeRepo } from "@/lib/use-resolved-home-repo";
 
 interface Message {
   role: "ai" | "user";
@@ -14,10 +15,16 @@ interface Message {
 }
 
 export default function AICopilotPage() {
-  const { repoOwner, repoName } = useOnboardingStore();
+  const homeRepo = useResolvedHomeRepo();
+  const { repoOwner, repoName } = homeRepo;
+  const repoReady = Boolean(repoOwner && repoName);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([
-    { role: "ai", content: "Hi! I'm your Family Copilot. I can help you add tasks, groceries, or summarize what's happening at home. Try saying 'Add a task to buy milk'!" }
+    {
+      role: "ai",
+      content:
+        "Hi! Tell me what needs doing and I will turn it into a GitHub issue. Try saying 'Add a task to buy milk'.",
+    }
   ]);
   const [orbState, setOrbState] = useState<"idle" | "thinking" | "speaking" | "error">("idle");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -28,9 +35,20 @@ export default function AICopilotPage() {
     }
   }, [messages]);
 
+  if (homeRepo.status !== "ready") {
+    return (
+      <div className="flex min-h-screen bg-zinc-50 overflow-hidden">
+        <Sidebar />
+        <main className="flex-1 p-12 overflow-y-auto">
+          <RepoRequiredState status={homeRepo.status} error={homeRepo.error} onRetry={homeRepo.refresh} />
+        </main>
+      </div>
+    );
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || !repoReady) return;
 
     const userText = input;
     setInput("");
@@ -48,15 +66,15 @@ export default function AICopilotPage() {
       setMessages(prev => prev.filter(m => !m.loading).concat({ 
         role: "ai", 
         content: data.success 
-          ? `✨ Done! I've added "${data.title}" to your ${data.label} list.` 
-          : `Sorry, I hit a snag: ${data.error}` 
+          ? `✨ Heuristic capture complete — I added "${data.title}" with the ${data.label} label.`
+          : `Sorry, I couldn't create that issue: ${data.error}` 
       }));
       
       setTimeout(() => setOrbState("idle"), 2000);
     } catch (error) {
       console.error(error);
       setOrbState("error");
-      setMessages(prev => prev.filter(m => !m.loading).concat({ role: "ai", content: "Something went wrong. Is your GitHub connection active?" }));
+      setMessages(prev => prev.filter(m => !m.loading).concat({ role: "ai", content: "Something went wrong while creating the issue. Check your GitHub connection and household repo settings." }));
       setTimeout(() => setOrbState("idle"), 3000);
     }
   };
@@ -71,7 +89,7 @@ export default function AICopilotPage() {
               <Sparkles className="w-16 h-16 text-yellow-500" /> Family Copilot
             </h1>
             <p className="text-3xl font-bold text-zinc-500 mt-4 uppercase italic">
-              Talk to your house. It listens (in a good way).
+              Tell OctoHome what needs doing and it will create a GitHub issue in {repoOwner}/{repoName}.
             </p>
           </div>
           <EnergyOrb state={orbState} className="w-32 h-32 mr-8" />
@@ -105,10 +123,11 @@ export default function AICopilotPage() {
             <input 
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="e.g. ADD A TASK TO MOW THE LAWN..."
+              placeholder={repoReady ? "e.g. ADD A TASK TO MOW THE LAWN..." : "FINISH ONBOARDING TO CONNECT A REPOSITORY"}
+              disabled={!repoReady}
               className="flex-1 h-28 border-8 border-black px-10 text-4xl font-black uppercase italic outline-none focus:ring-12 focus:ring-black bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]"
             />
-            <Button type="submit" className="h-28 px-16 text-4xl border-8 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:-translate-y-1 transition-transform">
+            <Button type="submit" disabled={!repoReady} className="h-28 px-16 text-4xl border-8 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:-translate-y-1 transition-transform">
               <Send className="w-12 h-12" />
             </Button>
           </form>
