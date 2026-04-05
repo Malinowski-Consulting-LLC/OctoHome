@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   getAppearanceBootstrapScript,
+  getRootAppearanceAttributes,
   getLegacyMagicModePreference,
   normalizeStoredTheme,
   normalizeSystemColorScheme,
@@ -67,4 +68,19 @@ test("getAppearanceBootstrapScript includes safe fallback root attributes", () =
 
 test("normalizeSystemColorScheme falls back to light when unavailable", () => {
   assert.equal(normalizeSystemColorScheme(undefined), "light");
+});
+
+test("getRootAppearanceAttributes returns the root data attribute contract", () => {
+  assert.deepEqual(
+    getRootAppearanceAttributes({
+      selectedTheme: "high-contrast",
+      systemScheme: "dark",
+      magicEnabled: false,
+    }),
+    {
+      "data-theme": "high-contrast",
+      "data-color-scheme": "light",
+      "data-effects": "reduced",
+    }
+  );
 });

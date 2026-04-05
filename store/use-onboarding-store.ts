@@ -12,14 +12,12 @@ export type OnboardingData = {
   /** GitHub organization login (required when isOrg is true). */
   orgLogin: string;
   invitedMembers: string[];
-  magicEnabled: boolean;
 };
 
 interface OnboardingState extends OnboardingData {
   setStep: (step: number) => void;
   setGithubData: (data: Partial<OnboardingData>) => void;
   addInvitedMember: (username: string) => void;
-  toggleMagic: () => void;
 }
 
 export const useOnboardingStore = create<OnboardingState>()(
@@ -33,7 +31,6 @@ export const useOnboardingStore = create<OnboardingState>()(
       isOrg: false,
       orgLogin: "",
       invitedMembers: [],
-      magicEnabled: true,
       setStep: (step) => set({ step }),
       setGithubData: (data) => set((state) => ({ ...state, ...data })),
       addInvitedMember: (username) =>
@@ -41,7 +38,6 @@ export const useOnboardingStore = create<OnboardingState>()(
           if (state.invitedMembers.includes(username)) return state;
           return { invitedMembers: [...state.invitedMembers, username] };
         }),
-      toggleMagic: () => set((state) => ({ magicEnabled: !state.magicEnabled })),
     }),
     {
       name: "octohome-onboarding",

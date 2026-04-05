@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { Atkinson_Hyperlegible } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { auth } from "@/auth";
+import { AppearanceProvider } from "@/components/appearance-provider";
 import { SessionProvider } from "next-auth/react";
+import { getAppearanceBootstrapScript } from "@/lib/appearance";
 
 const atkinson = Atkinson_Hyperlegible({
   subsets: ["latin"],
@@ -24,11 +27,23 @@ export default async function RootLayout({
   const session = await auth();
 
   return (
-    <html lang="en" className={atkinson.variable}>
+    <html
+      lang="en"
+      className={atkinson.variable}
+      data-theme="aether"
+      data-color-scheme="light"
+      data-effects="full"
+      suppressHydrationWarning
+    >
       <body className="bg-background text-foreground antialiased min-h-screen">
-        <SessionProvider session={session}>
-          {children}
-        </SessionProvider>
+        <Script
+          id="appearance-bootstrap"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: getAppearanceBootstrapScript() }}
+        />
+        <AppearanceProvider>
+          <SessionProvider session={session}>{children}</SessionProvider>
+        </AppearanceProvider>
       </body>
     </html>
   );

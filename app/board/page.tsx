@@ -8,13 +8,13 @@ import { Button } from "@/components/ui/button";
 import { MagicalCelebration } from "@/components/magic/magical-celebration";
 import { AnimatedBeam } from "@/components/magic/animated-beam";
 import { useResolvedHomeRepo } from "@/lib/use-resolved-home-repo";
-import { useOnboardingStore } from "@/store/use-onboarding-store";
+import { useAppearanceStore } from "@/store/use-appearance-store";
 import type { IssueTask } from "@/lib/types";
 
 const COLUMNS = ["Open", "Done"];
 
 export default function BoardPage() {
-  const { magicEnabled } = useOnboardingStore();
+  const { magicEnabled } = useAppearanceStore();
   const { status, error: repoError, refresh, repoOwner, repoName } = useResolvedHomeRepo();
   const [tasks, setTasks] = useState<IssueTask[]>([]);
   const [loading, setLoading] = useState(true);

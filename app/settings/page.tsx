@@ -5,14 +5,16 @@ import { signOut, useSession } from "next-auth/react";
 import Sidebar from "@/components/sidebar";
 import { Settings, Shield, Database, Github, LogOut, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useOnboardingStore } from "@/store/use-onboarding-store";
 import { useResolvedHomeRepo } from "@/lib/use-resolved-home-repo";
+import { useAppearanceStore } from "@/store/use-appearance-store";
+import { useOnboardingStore } from "@/store/use-onboarding-store";
 
 export default function SettingsPage() {
   const { data: session } = useSession();
   const homeRepo = useResolvedHomeRepo();
   const { repoOwner, repoName } = homeRepo;
-  const { isOrg, magicEnabled, toggleMagic, setGithubData } = useOnboardingStore();
+  const { isOrg, setGithubData } = useOnboardingStore();
+  const { magicEnabled, toggleMagicMode } = useAppearanceStore();
   const repoUrl = repoOwner && repoName ? `https://github.com/${repoOwner}/${repoName}` : null;
   const accountUrl = session?.user?.login
     ? `https://github.com/${session.user.login}`
@@ -43,7 +45,7 @@ export default function SettingsPage() {
                 <p className="text-xl font-bold text-zinc-500 uppercase italic mt-2">Enables fluid animations and visual depth.</p>
               </div>
               <button 
-                onClick={toggleMagic}
+                onClick={toggleMagicMode}
                 className={`w-24 h-12 border-4 border-black relative transition-colors ${magicEnabled ? 'bg-black' : 'bg-white'}`}
               >
                 <div className={`absolute top-1 bottom-1 w-8 transition-all border-2 border-black ${magicEnabled ? 'right-1 bg-white' : 'left-1 bg-black'}`} />
