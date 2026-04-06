@@ -36,6 +36,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Test
+        run: node --test --experimental-strip-types ./lib/*.test.ts
+
       - name: Build Next.js app
         run: npm run build
         env:
@@ -133,6 +136,7 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
         with:
+          toolchain: stable
           # macOS cross-compilation targets; ignored on other platforms
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
