@@ -19,9 +19,9 @@ test("section nav item does not match lookalike prefixes", () => {
   assert.equal(isNavItemActive("/family-room", "/family"), false);
 });
 
-test("mobile nav trigger sits away from the top-left header area", () => {
-  assert.match(mobileNavTriggerPlacementClassName, /\bbottom-4\b/);
+test("mobile nav trigger stays in the top-right mobile gutter", () => {
+  assert.match(mobileNavTriggerPlacementClassName, /\btop-4\b/);
   assert.match(mobileNavTriggerPlacementClassName, /\bright-4\b/);
-  assert.doesNotMatch(mobileNavTriggerPlacementClassName, /\btop-4\b/);
+  assert.doesNotMatch(mobileNavTriggerPlacementClassName, /\bbottom-4\b/);
   assert.doesNotMatch(mobileNavTriggerPlacementClassName, /\bleft-4\b/);
 });
