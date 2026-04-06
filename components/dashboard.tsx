@@ -1,31 +1,65 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
-import { useOnboardingStore } from "@/store/use-onboarding-store";
-import type { FamilyMember, IssueTask } from "@/lib/types";
-import Sidebar from "@/components/sidebar";
-import { Sparkles, Flame, Star, ListTodo, Users, KanbanSquare, Loader2, AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { BentoGrid, BentoCard } from "./magic/bento-grid";
-import { AnimatedBeam } from "./magic/animated-beam";
+import {
+  AlertCircle,
+  ArrowRight,
+  Flame,
+  KanbanSquare,
+  ListTodo,
+  Loader2,
+  Sparkles,
+  Star,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
-const labelToneMap: Record<string, string> = {
-  groceries: "bg-green-100",
-  bills: "bg-orange-100",
-  maintenance: "bg-blue-100",
-  school: "bg-purple-100",
-  health: "bg-red-100",
-  urgent: "bg-yellow-100",
+import { ActionGroup } from "@/components/action-group";
+import { AppShell } from "@/components/app-shell";
+import { MetricCard } from "@/components/metric-card";
+import { PageHeader } from "@/components/page-header";
+import { SurfaceCard } from "@/components/surface-card";
+import type { FamilyMember, IssueTask } from "@/lib/types";
+import { useOnboardingStore } from "@/store/use-onboarding-store";
+
+type QuickLink = {
+  href: string;
+  label: string;
+  description: string;
+  icon: LucideIcon;
 };
+
+const quickLinks: QuickLink[] = [
+  {
+    href: "/tasks",
+    label: "Tasks",
+    description: "Browse the current chore list and close out the next thing on deck.",
+    icon: ListTodo,
+  },
+  {
+    href: "/board",
+    label: "Board",
+    description: "See what is open, what is done, and where the family flow is getting stuck.",
+    icon: KanbanSquare,
+  },
+  {
+    href: "/family",
+    label: "Family",
+    description: "Check points, streaks, and the current household momentum at a glance.",
+    icon: Users,
+  },
+];
+
+const actionClassName =
+  "inline-flex items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-[color:var(--interactive-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring-color)]";
+
+const primaryActionClassName =
+  "inline-flex items-center justify-center gap-2 rounded-[var(--radius-control)] border border-transparent bg-[color:var(--accent-solid)] px-4 py-2.5 text-sm font-medium text-[color:var(--app-bg)] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring-color)]";
 
 function getTaskLabel(task: IssueTask) {
   return task.labels[0]?.name ?? "Household";
-}
-
-function getTaskTone(task: IssueTask) {
-  return labelToneMap[getTaskLabel(task).toLowerCase()] ?? "bg-zinc-100";
 }
 
 function getInitials(login?: string | null) {
@@ -43,11 +77,6 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [memberWarning, setMemberWarning] = useState<string | null>(null);
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const pulseRef = useRef<HTMLDivElement>(null);
-  const primaryMetricRef = useRef<HTMLDivElement>(null);
-  const secondaryMetricRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     if (!repoOwner || !repoName) {
       return;
@@ -64,10 +93,7 @@ export default function Dashboard() {
       const familyUrl = `/api/family?owner=${encodeURIComponent(repoOwner)}&repo=${encodeURIComponent(repoName)}`;
 
       try {
-        const [tasksResult, familyResult] = await Promise.allSettled([
-          fetch(tasksUrl),
-          fetch(familyUrl),
-        ]);
+        const [tasksResult, familyResult] = await Promise.allSettled([fetch(tasksUrl), fetch(familyUrl)]);
 
         if (!active) {
           return;
@@ -108,9 +134,7 @@ export default function Dashboard() {
             setMembers(familyPayload.members ?? []);
           } else {
             setMembers([]);
-            setMemberWarning(
-              familyPayload.error ?? "Member stats are unavailable for this repository."
-            );
+            setMemberWarning(familyPayload.error ?? "Member stats are unavailable for this repository.");
           }
         } else {
           setMembers([]);
@@ -148,175 +172,198 @@ export default function Dashboard() {
   }, [members, session?.user?.login]);
 
   const primaryMetric = currentMember
-    ? { label: "Your Streak", value: currentMember.streak, icon: Flame, iconClassName: "text-red-600" }
-    : { label: "Members", value: members.length, icon: Users, iconClassName: "text-zinc-700" };
+    ? { label: "Your streak", value: currentMember.streak, icon: Flame, iconClassName: "text-rose-500" }
+    : { label: "Members", value: members.length, icon: Users, iconClassName: "text-foreground" };
 
   const secondaryMetric = currentMember
-    ? { label: "Your Points", value: currentMember.points, icon: Star, iconClassName: "text-yellow-500" }
-    : { label: "Open Tasks", value: tasks.length, icon: ListTodo, iconClassName: "text-black" };
+    ? { label: "Your points", value: currentMember.points, icon: Star, iconClassName: "text-amber-500" }
+    : { label: "Open tasks", value: tasks.length, icon: ListTodo, iconClassName: "text-foreground" };
 
   const currentFocus = tasks.slice(0, 3);
+  const firstName = session?.user?.name?.split(" ")[0] ?? "there";
   const PrimaryMetricIcon = primaryMetric.icon;
   const SecondaryMetricIcon = secondaryMetric.icon;
 
   return (
-    <div className="flex min-h-screen bg-zinc-50 font-sans" ref={containerRef}>
-      <Sidebar />
-      <main className="flex-1 p-12 overflow-y-auto relative">
-        {/* Animated Beams */}
-        <AnimatedBeam containerRef={containerRef} fromRef={pulseRef} toRef={primaryMetricRef} curvature={50} />
-        <AnimatedBeam containerRef={containerRef} fromRef={pulseRef} toRef={secondaryMetricRef} curvature={-50} />
+    <AppShell width="full" contentClassName="max-w-6xl">
+      <PageHeader
+        title={`Hello, ${firstName}`}
+        subtitle={`Welcome back to ${householdName || "OctoHome"}. Your household workspace stays connected to ${repoLabel}.`}
+        actions={
+          <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] px-3 py-2 text-sm font-medium text-muted-foreground">
+            <Sparkles className="h-4 w-4" />
+            Home overview
+          </span>
+        }
+      />
 
-        <header className="flex justify-between items-start mb-12 relative z-10">
-          <div>
-            <h1 className="text-7xl font-black uppercase tracking-tighter leading-none">
-              Hello, {session?.user?.name?.split(" ")[0]}!
-            </h1>
-            <p className="text-2xl font-bold text-zinc-500 mt-4 uppercase italic">
-              Welcome back to {householdName || "OctoHome"}.
-            </p>
-            {memberWarning ? (
-              <p className="mt-4 text-sm font-black uppercase tracking-wide text-zinc-500">
-                {memberWarning}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(16rem,0.8fr)]">
+        <SurfaceCard tone="accent" data-card-role="hero" className="relative overflow-hidden">
+          <div
+            className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[image:var(--hero-glow)] opacity-50 blur-3xl"
+            data-magic-effect
+          />
+          <div className="relative z-10 space-y-6">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              <Sparkles className="h-3.5 w-3.5" />
+              Aether command surface
+            </div>
+
+            <div className="max-w-2xl space-y-3">
+              <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[2rem]">
+                Stay on top of the day without the noise.
+              </h2>
+              <p className="text-sm leading-6 text-muted-foreground sm:text-base">
+                Describe a chore in plain language or jump straight into your active task list. OctoHome will write the
+                result into {repoLabel}.
               </p>
-            ) : null}
-          </div>
-          <div className="flex gap-6">
-            <div ref={primaryMetricRef} className="border-8 border-black p-6 text-center min-w-[180px] bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-              <PrimaryMetricIcon className={`w-10 h-10 mx-auto mb-2 ${primaryMetric.iconClassName}`} />
-              <div className="text-sm font-black uppercase tracking-widest">{primaryMetric.label}</div>
-              <div className="text-5xl font-black italic">{primaryMetric.value}</div>
+              {memberWarning ? (
+                <p className="text-sm leading-6 text-muted-foreground">{memberWarning}</p>
+              ) : null}
             </div>
-            <div ref={secondaryMetricRef} className="border-8 border-black p-6 text-center min-w-[180px] bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-              <SecondaryMetricIcon className={`w-10 h-10 mx-auto mb-2 ${secondaryMetric.iconClassName}`} />
-              <div className="text-sm font-black uppercase tracking-widest">{secondaryMetric.label}</div>
-              <div className="text-5xl font-black italic">{secondaryMetric.value}</div>
-            </div>
-          </div>
-        </header>
 
-        {/* Bento Grid */}
-        <BentoGrid className="relative z-10">
-          <div ref={pulseRef} className="md:col-span-2 md:row-span-1 border-8 border-black p-10 bg-black text-white relative overflow-hidden flex flex-col justify-between shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
-            <div className="relative z-10">
-                  <h2 className="text-5xl font-black uppercase tracking-tighter flex items-center gap-4 mb-4">
-                    <Sparkles className="w-12 h-12 text-yellow-400" /> AI COPILOT
-                  </h2>
-                  <p className="text-3xl font-bold italic opacity-80 leading-tight max-w-2xl">
-                    Describe a chore in plain language and OctoHome will heuristically turn it into a GitHub issue for {repoLabel}.
-                  </p>
+            <ActionGroup>
+              <Link href="/ai" className={primaryActionClassName}>
+                Open AI Copilot
+              </Link>
+              <Link href="/tasks/new" className={actionClassName}>
+                Add task
+              </Link>
+            </ActionGroup>
+          </div>
+        </SurfaceCard>
+
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+          <MetricCard
+            label={primaryMetric.label}
+            value={primaryMetric.value}
+            icon={<PrimaryMetricIcon className={`h-5 w-5 ${primaryMetric.iconClassName}`} />}
+          />
+          <MetricCard
+            label={secondaryMetric.label}
+            value={secondaryMetric.value}
+            icon={<SecondaryMetricIcon className={`h-5 w-5 ${secondaryMetric.iconClassName}`} />}
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        {quickLinks.map((item) => {
+          const Icon = item.icon;
+
+          return (
+            <Link key={item.href} href={item.href} className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring-color)]">
+              <SurfaceCard className="h-full transition-colors group-hover:bg-[color:var(--interactive-hover)]">
+                <div className="flex h-full items-start justify-between gap-4">
+                  <div className="space-y-4">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-control)] bg-[color:var(--interactive-bg)] text-foreground">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <div className="space-y-2">
+                      <h2 className="text-base font-semibold text-foreground">{item.label}</h2>
+                      <p className="text-sm leading-6 text-muted-foreground">{item.description}</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                 </div>
-            <div className="relative z-10 flex gap-4 mt-8">
-              <Button asChild variant="outline" className="bg-white text-black border-none h-20 px-10 text-2xl font-black">
-                <Link href="/ai">Open AI</Link>
-              </Button>
-              <Button asChild className="h-20 px-10 text-2xl font-black">
-                <Link href="/tasks/new">Add Task</Link>
-              </Button>
-            </div>
-            {/* Background Glow */}
-            <div className="absolute top-0 right-0 w-96 h-96 bg-zinc-800 rounded-full -mr-48 -mt-48 opacity-50 blur-3xl animate-pulse-slow"></div>
-          </div>
+              </SurfaceCard>
+            </Link>
+          );
+        })}
+      </div>
 
-          <BentoCard
-            name="Tasks"
-            className="md:col-span-1"
-            Icon={ListTodo}
-            description="Manage your daily chores."
-            href="/tasks"
-            cta="View All"
-          />
+      <section className="space-y-4">
+        <div className="space-y-1">
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Focus queue</p>
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">Current focus</h2>
+          <p className="text-sm leading-6 text-muted-foreground">
+            The next few open chores worth checking in on across your household repo.
+          </p>
+        </div>
 
-          <BentoCard
-            name="Board"
-            className="md:col-span-1"
-            Icon={KanbanSquare}
-            description="Visual household flow."
-            href="/board"
-            cta="Open Board"
-          />
-
-          <BentoCard
-            name="Family"
-            className="md:col-span-2"
-            Icon={Users}
-            description="Leaderboard and members."
-            href="/family"
-            cta="See Rankings"
-          />
-        </BentoGrid>
-
-        <div className="mt-16 relative z-10">
-          <h2 className="text-5xl font-black uppercase tracking-tighter mb-10 italic border-b-8 border-black pb-4 inline-block">Current Focus</h2>
-          {!hasRepo ? (
-            <div className="border-8 border-red-600 p-12 flex items-center justify-between gap-6 bg-white shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
-              <div className="flex items-center gap-6">
-                <AlertCircle className="w-10 h-10 text-red-600 flex-shrink-0" />
-                <p className="text-2xl font-black uppercase text-red-600">
-                  Connect a household repository to load the dashboard.
+        {!hasRepo ? (
+          <SurfaceCard className="space-y-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="mt-1 h-5 w-5 shrink-0 text-destructive" />
+              <div className="space-y-2">
+                <p className="text-base font-semibold text-foreground">Connect a household repository first</p>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  Finish onboarding to load the dashboard and start surfacing your family’s current work.
                 </p>
               </div>
-              <Button asChild variant="outline" className="h-16 px-8 text-xl">
-                <Link href="/">Go Home</Link>
-              </Button>
             </div>
-          ) : loading ? (
-            <div className="border-8 border-black p-12 flex items-center gap-6 bg-white shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
-              <Loader2 className="w-10 h-10 animate-spin flex-shrink-0" />
-              <p className="text-2xl font-black uppercase">Loading the latest household tasks...</p>
+            <ActionGroup>
+              <Link href="/" className={actionClassName}>
+                Go home
+              </Link>
+            </ActionGroup>
+          </SurfaceCard>
+        ) : loading ? (
+          <SurfaceCard className="space-y-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Refreshing the latest household tasks</span>
             </div>
-          ) : error ? (
-            <div className="border-8 border-red-600 p-12 flex items-center justify-between gap-6 bg-white shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
-              <div className="flex items-center gap-6">
-                <AlertCircle className="w-10 h-10 text-red-600 flex-shrink-0" />
-                <p className="text-2xl font-black uppercase text-red-600">{error}</p>
-              </div>
-              <Button asChild variant="outline" className="h-16 px-8 text-xl">
-                <Link href="/tasks">Open Tasks</Link>
-              </Button>
-            </div>
-          ) : currentFocus.length === 0 ? (
-            <div className="border-8 border-black p-12 bg-white shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] space-y-6">
-              <p className="text-3xl font-black uppercase italic">
-                No open household tasks right now.
-              </p>
-              <p className="text-xl font-bold text-zinc-500 uppercase">
-                Add a task manually or use the heuristic AI flow to create one quickly.
-              </p>
-              <div className="flex gap-4">
-                <Button asChild className="h-16 px-8 text-xl">
-                  <Link href="/tasks/new">Create Task</Link>
-                </Button>
-                <Button asChild variant="outline" className="h-16 px-8 text-xl">
-                  <Link href="/ai">Open AI</Link>
-                </Button>
+          </SurfaceCard>
+        ) : error ? (
+          <SurfaceCard className="space-y-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="mt-1 h-5 w-5 shrink-0 text-destructive" />
+              <div className="space-y-2">
+                <p className="text-base font-semibold text-foreground">Tasks could not be loaded</p>
+                <p className="text-sm leading-6 text-muted-foreground">{error}</p>
               </div>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {currentFocus.map((task) => (
-                <div key={task.number} className="border-8 border-black p-8 flex flex-col justify-between hover:translate-x-2 hover:-translate-y-2 transition-all bg-white shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] hover:shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] group">
-                  <div>
-                    <span className={`inline-block border-4 border-black px-4 py-1 text-sm font-black uppercase mb-6 ${getTaskTone(task)}`}>
-                      {getTaskLabel(task)}
-                    </span>
-                    <h3 className="text-3xl font-black leading-none uppercase italic">{task.title}</h3>
-                    <p className="mt-4 text-sm font-black uppercase text-zinc-400">Issue #{task.number}</p>
-                  </div>
-                  <div className="mt-12 flex justify-between items-center gap-4">
-                    <div className="w-14 h-14 border-4 border-black bg-zinc-100 rounded-full flex items-center justify-center font-black text-xl">
-                      {getInitials(task.user?.login)}
-                    </div>
-                    <Button asChild variant="outline" className="h-16 px-6 text-lg">
-                      <Link href="/tasks">Open Tasks</Link>
-                    </Button>
+            <ActionGroup>
+              <Link href="/tasks" className={actionClassName}>
+                Open tasks
+              </Link>
+            </ActionGroup>
+          </SurfaceCard>
+        ) : currentFocus.length === 0 ? (
+          <SurfaceCard className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-base font-semibold text-foreground">Nothing is waiting right now</p>
+              <p className="text-sm leading-6 text-muted-foreground">
+                You are all caught up. Add a task manually or use AI Copilot to capture the next household chore.
+              </p>
+            </div>
+            <ActionGroup>
+              <Link href="/tasks/new" className={primaryActionClassName}>
+                Create task
+              </Link>
+              <Link href="/ai" className={actionClassName}>
+                Open AI
+              </Link>
+            </ActionGroup>
+          </SurfaceCard>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-3">
+            {currentFocus.map((task) => (
+              <SurfaceCard key={task.number} className="flex h-full flex-col justify-between gap-5">
+                <div className="space-y-4">
+                  <span className="inline-flex items-center rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                    {getTaskLabel(task)}
+                  </span>
+                  <div className="space-y-2">
+                    <h3 className="text-base font-semibold leading-snug text-foreground">{task.title}</h3>
+                    <p className="text-sm text-muted-foreground">Issue #{task.number}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </main>
-    </div>
+
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-2)] text-sm font-semibold text-foreground">
+                    {getInitials(task.user?.login)}
+                  </div>
+                  <Link href="/tasks" className={actionClassName}>
+                    Open tasks
+                  </Link>
+                </div>
+              </SurfaceCard>
+            ))}
+          </div>
+        )}
+      </section>
+    </AppShell>
   );
 }
