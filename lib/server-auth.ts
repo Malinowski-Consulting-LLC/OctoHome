@@ -48,7 +48,7 @@ export async function requireHomeRepoContext(
     getAuthContext?: AuthContextResolver;
     findRepo?: HomeRepoResolver;
   } = {}
-): Promise<HomeRepoContext> {
+): Promise<HomeRepoContext<HomeRepoSummary>> {
   const resolution = await resolveHomeRepoContext(request, {
     getAuthContext: dependencies.getAuthContext ?? getGitHubAuthContext,
     findRepo: dependencies.findRepo ?? findHomeRepo,

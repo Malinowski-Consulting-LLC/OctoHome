@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
-import { ApiError, createApiErrorResponse } from "@/lib/api-errors";
-import { fetchStats, getOctokit } from "@/lib/github";
-import type { StoredMemberStats } from "@/lib/member-stats";
-import { requireHomeRepoContext } from "@/lib/server-auth";
-import type { FamilyMember } from "@/lib/types";
+import { ApiError, UnauthorizedError, createApiErrorResponse } from "@/lib/api-errors";
+import { fetchFamilyMembers, inviteFamilyMember } from "@/lib/github";
+import { enforceMutationRateLimit } from "@/lib/server-rate-limit";
+import { assertTrustedOrigin, getGitHubAuthContext, requireHomeRepoContext } from "@/lib/server-auth";
+
+const inviteBodySchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .min(1, "GitHub username is required.")
+    .max(39, "GitHub usernames must be 39 characters or fewer.")
+    .regex(/^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?$/, "Enter a valid GitHub username."),
+});
 
 /**
  * GET /api/family
@@ -12,38 +21,70 @@ import type { FamilyMember } from "@/lib/types";
  */
 export async function GET(req: NextRequest) {
   try {
-    const { accessToken, owner, repo } = await requireHomeRepoContext(req);
-    const octokit = getOctokit(accessToken);
+    const { accessToken, owner, repo, homeRepo } = await requireHomeRepoContext(req);
 
-    // Collaborator listing requires push access. Catch 403 explicitly so the
-    // client receives a clear message instead of a generic 500.
-    let collabs: Awaited<
-      ReturnType<typeof octokit.repos.listCollaborators>
-    >["data"];
     try {
-      const { data } = await octokit.repos.listCollaborators({ owner, repo });
-      collabs = data;
+      const members = await fetchFamilyMembers(accessToken, owner, repo);
+      return NextResponse.json({ members, viewer: homeRepo.viewer });
     } catch (e) {
       if ((e as { status?: number })?.status === 403) {
         throw new ApiError(
-          "You do not have permission to list collaborators for this repository.",
+          "Household member details are only available to repository managers for this repository.",
           403
         );
       }
       throw e;
     }
+  } catch (error) {
+    return createApiErrorResponse(error);
+  }
+}
 
-    const { stats } = await fetchStats(accessToken, owner, repo);
-    const memberStats = stats.members as Record<string, StoredMemberStats | undefined>;
+/**
+ * POST /api/family
+ * Invites a new collaborator to the authenticated user's household repository.
+ */
+export async function POST(req: NextRequest) {
+  try {
+    assertTrustedOrigin(req);
+    const authContext = await getGitHubAuthContext(req);
 
-    const members: FamilyMember[] = collabs.map((c) => ({
-      login: c.login,
-      avatar_url: c.avatar_url,
-      points: memberStats[c.login]?.points ?? 0,
-      streak: memberStats[c.login]?.streak ?? 0,
-    }));
+    if (!authContext.accessToken || !authContext.login) {
+      throw new UnauthorizedError();
+    }
 
-    return NextResponse.json({ members });
+    await enforceMutationRateLimit(req, {
+      bucket: "family-invite",
+      login: authContext.login,
+      limit: 20,
+      window: "1 h",
+    });
+
+    const { accessToken, owner, repo, homeRepo } = await requireHomeRepoContext(req, {
+      getAuthContext: async () => authContext,
+    });
+
+    if (!homeRepo.viewer.canManageFamily) {
+      throw new ApiError("Only repository managers can invite new family members.", 403);
+    }
+
+    const { username } = inviteBodySchema.parse(await req.json());
+    const result = await inviteFamilyMember(
+      accessToken,
+      owner,
+      repo,
+      username,
+      homeRepo.isOrg
+    );
+
+    if (!result.success) {
+      return NextResponse.json({ error: result.message }, { status: 400 });
+    }
+
+    return NextResponse.json(
+      { result },
+      { status: result.status === "invited" ? 201 : 200 }
+    );
   } catch (error) {
     return createApiErrorResponse(error);
   }

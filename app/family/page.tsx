@@ -1,48 +1,90 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import { AlertCircle, Flame, Loader2, Trophy, Users } from "lucide-react";
+import { AlertCircle, Flame, Loader2, Trophy, UserPlus, Users } from "lucide-react";
 
 import { MetricCard } from "@/components/metric-card";
 import { PageHeader } from "@/components/page-header";
 import RepoRequiredState from "@/components/repo-required-state";
 import Sidebar from "@/components/sidebar";
 import { SurfaceCard } from "@/components/surface-card";
-import type { FamilyMember } from "@/lib/types";
+import { Input } from "@/components/ui/input";
+import type { FamilyInviteResult, FamilyMember } from "@/lib/types";
 import { useResolvedHomeRepo } from "@/lib/use-resolved-home-repo";
 
 const eyebrowClassName =
   "inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground";
 
+const inviteFieldClassName =
+  "h-12 rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] px-4 text-base font-medium text-foreground placeholder:text-muted-foreground";
+
+const inviteButtonClassName =
+  "inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-control)] border border-transparent bg-[color:var(--accent-solid)] px-4 py-2.5 text-sm font-medium text-[color:var(--app-bg)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
+
+type FamilyResponse = {
+  members?: FamilyMember[];
+  error?: string;
+};
+
+type InviteNotice = {
+  tone: "success" | "info" | "error";
+  message: string;
+};
+
 export default function FamilyPage() {
-  const { status, error: repoError, refresh, repoOwner, repoName } = useResolvedHomeRepo();
+  const {
+    status,
+    error: repoError,
+    refresh,
+    repoOwner,
+    repoName,
+    viewer: resolvedViewer,
+  } = useResolvedHomeRepo();
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [inviteUsername, setInviteUsername] = useState("");
+  const [inviteNotice, setInviteNotice] = useState<InviteNotice | null>(null);
+  const [isInviting, setIsInviting] = useState(false);
+  const viewer = resolvedViewer ?? null;
+
+  const loadFamily = useCallback(async () => {
+    if (!repoOwner || !repoName) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/family", {
+        headers: { "x-octohome-repo-owner": repoOwner },
+      });
+      const json = (await res.json()) as FamilyResponse;
+
+      if (!res.ok) {
+        if (res.status === 403) {
+          setMembers([]);
+          return;
+        }
+        throw new Error(json.error ?? "Failed to fetch family data");
+      }
+
+      setMembers(json.members ?? []);
+    } catch (err) {
+      setError((err as Error).message);
+      setMembers([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [repoName, repoOwner]);
 
   useEffect(() => {
     if (status !== "ready" || !repoOwner || !repoName) return;
-
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch("/api/family", {
-          headers: { "x-octohome-repo-owner": repoOwner },
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error ?? "Failed to fetch family data");
-        setMembers(json.members as FamilyMember[]);
-      } catch (err) {
-        setError((err as Error).message);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    void load();
-  }, [repoName, repoOwner, status]);
+    void loadFamily();
+  }, [loadFamily, repoName, repoOwner, status]);
 
   if (status !== "ready") {
     return (
@@ -60,6 +102,54 @@ export default function FamilyPage() {
   const sortedMembers = [...members].sort((left, right) => right.points - left.points);
   const totalPoints = members.reduce((sum, member) => sum + member.points, 0);
   const longestStreak = members.reduce((max, member) => Math.max(max, member.streak), 0);
+
+  const handleInvite = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!repoOwner || !repoName || !inviteUsername.trim()) {
+      return;
+    }
+
+    setIsInviting(true);
+    setInviteNotice(null);
+
+    try {
+      const res = await fetch("/api/family", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-octohome-repo-owner": repoOwner,
+        },
+        body: JSON.stringify({ username: inviteUsername.trim() }),
+      });
+      const json = (await res.json()) as {
+        result?: FamilyInviteResult;
+        error?: string;
+      };
+
+      if (!res.ok) {
+        throw new Error(json.error ?? json.result?.message ?? "Could not invite that family member.");
+      }
+
+      if (!json.result) {
+        throw new Error("Could not invite that family member.");
+      }
+
+      setInviteNotice({
+        tone: json.result.status === "already_has_access" ? "info" : "success",
+        message: json.result.message,
+      });
+      setInviteUsername("");
+      await loadFamily();
+    } catch (err) {
+      setInviteNotice({
+        tone: "error",
+        message: (err as Error).message,
+      });
+    } finally {
+      setIsInviting(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -83,7 +173,7 @@ export default function FamilyPage() {
             />
           </div>
 
-          {!loading && !error ? (
+          {!loading && !error && members.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <MetricCard
                 label="Household members"
@@ -108,7 +198,7 @@ export default function FamilyPage() {
               <div className="flex items-start gap-3">
                 <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
                 <div>
-                  <h2 className="text-lg font-semibold text-foreground">Could not load family stats</h2>
+                  <h2 className="text-lg font-semibold text-foreground">Could not load family details</h2>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">{error}</p>
                 </div>
               </div>
@@ -123,6 +213,22 @@ export default function FamilyPage() {
                     Refreshing points and streaks from your household repository.
                   </p>
                 </div>
+              </div>
+            </SurfaceCard>
+          ) : !viewer?.canManageFamily ? (
+            <SurfaceCard tone="subtle">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Users className="h-4 w-4" />
+                  Household visibility
+                </div>
+                <h2 className="text-lg font-semibold text-foreground">Family details are visible to managers</h2>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  GitHub repo admins and maintainers can review the live household roster, points, and streaks.
+                </p>
+                <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  {viewer ? `Your access level: ${viewer.permission}` : "Checking your access level…"}
+                </p>
               </div>
             </SurfaceCard>
           ) : (
@@ -215,6 +321,85 @@ export default function FamilyPage() {
               </SurfaceCard>
             </div>
           )}
+
+          <SurfaceCard className="space-y-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <UserPlus className="h-4 w-4" />
+                  Household access
+                </div>
+                <h2 className="mt-2 text-lg font-semibold text-foreground">Invite a family member</h2>
+              </div>
+              <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] px-3 py-1.5 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                {viewer?.canManageFamily ? "Manager access" : "Limited access"}
+              </span>
+            </div>
+
+            {viewer?.canManageFamily ? (
+              <form
+                onSubmit={(event) => {
+                  void handleInvite(event);
+                }}
+                className="space-y-4"
+              >
+                <div className="space-y-2">
+                  <label htmlFor="invite-username" className="text-sm font-medium text-foreground">
+                    GitHub username
+                  </label>
+                  <Input
+                    id="invite-username"
+                    name="username"
+                    value={inviteUsername}
+                    onChange={(event) => setInviteUsername(event.target.value)}
+                    placeholder="e.g. octocat"
+                    className={inviteFieldClassName}
+                  />
+                </div>
+
+                <p className="text-sm leading-6 text-muted-foreground">
+                  Invite a GitHub username to join your household after onboarding finishes.
+                </p>
+
+                {inviteNotice ? (
+                  <div className="rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-2)] px-4 py-3">
+                    <p
+                      className={`text-sm font-medium ${
+                        inviteNotice.tone === "error" ? "text-destructive" : "text-foreground"
+                      }`}
+                    >
+                      {inviteNotice.message}
+                    </p>
+                  </div>
+                ) : null}
+
+                <button
+                  type="submit"
+                  disabled={isInviting || !inviteUsername.trim()}
+                  className={inviteButtonClassName}
+                >
+                  {isInviting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <UserPlus className="h-4 w-4" />
+                  )}
+                  Invite to household
+                </button>
+              </form>
+            ) : (
+              <div className="rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-2)] px-4 py-3">
+                <p className="text-sm font-medium text-foreground">
+                  Only household managers can invite new members.
+                </p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  GitHub repo admins and maintainers can manage family membership for this household.
+                </p>
+                <p className="mt-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  {viewer ? `Your access level: ${viewer.permission}` : "Checking your access level…"}
+                </p>
+              </div>
+            )}
+          </SurfaceCard>
         </div>
       </main>
     </div>

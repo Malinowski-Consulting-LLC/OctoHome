@@ -1,12 +1,17 @@
 import { Octokit } from "@octokit/rest";
 
 import {
+  buildFamilyInviteResult,
+  buildHomeViewer,
   getInvitePermission,
   parseRepoStats,
+  resolveRepoPermission,
   selectHomeRepoCandidate,
+  type RepoPermissionSource,
   type RepoStats,
 } from "@/lib/github-policy";
-import { applyMemberActivity } from "@/lib/member-stats";
+import { applyMemberActivity, type StoredMemberStats } from "@/lib/member-stats";
+import type { FamilyMember, FamilyInviteResult, HomeViewer } from "@/lib/types";
 
 export function getOctokit(token: string) {
   return new Octokit({ auth: token });
@@ -27,8 +32,22 @@ export type HomeRepoSummary = {
   name: string;
   updatedAt: string;
   isPrivate: boolean;
+  isOrg: boolean;
+  viewer: HomeViewer;
   /** Populated from stats.json when the repo has been bootstrapped; null otherwise. */
   bootstrap: HomeBootstrap | null;
+};
+
+type HomeRepoSummarySource = RepoPermissionSource & {
+  owner: {
+    login: string;
+    type?: string | null;
+  };
+  name: string;
+  updated_at?: string | null;
+  created_at?: string | null;
+  pushed_at?: string | null;
+  private: boolean;
 };
 
 /** Returns true only for HTTP 404 responses from the GitHub API. */
@@ -69,6 +88,25 @@ async function tryReadBootstrap(
   };
 }
 
+async function buildHomeRepoSummary(
+  token: string,
+  login: string,
+  repo: HomeRepoSummarySource
+): Promise<HomeRepoSummary> {
+  const bootstrap = await tryReadBootstrap(token, repo.owner.login, repo.name);
+
+  return {
+    owner: repo.owner.login,
+    name: repo.name,
+    updatedAt:
+      repo.updated_at ?? repo.created_at ?? repo.pushed_at ?? "1970-01-01T00:00:00.000Z",
+    isPrivate: repo.private,
+    isOrg: repo.owner.type === "Organization",
+    viewer: buildHomeViewer(login, resolveRepoPermission(repo)),
+    bootstrap,
+  };
+}
+
 /**
  * Discovers the user's accessible home-ops repository.
  * When a preferred owner is provided, only that specific owner/home-ops pair is
@@ -85,14 +123,7 @@ export async function findHomeRepo(
   if (preferredOwner) {
     try {
       const { data } = await octokit.repos.get({ owner: preferredOwner, repo: "home-ops" });
-      const bootstrap = await tryReadBootstrap(token, data.owner.login, data.name);
-      return {
-        owner: data.owner.login,
-        name: data.name,
-        updatedAt: data.updated_at,
-        isPrivate: data.private,
-        bootstrap,
-      };
+      return await buildHomeRepoSummary(token, login, data);
     } catch (e) {
       if (!isNotFoundError(e) && !isForbiddenError(e)) throw e;
       return null;
@@ -123,14 +154,15 @@ export async function findHomeRepo(
     return null;
   }
 
-  const bootstrap = await tryReadBootstrap(token, candidate.owner, candidate.name);
-  return {
-    owner: candidate.owner,
-    name: candidate.name,
-    updatedAt: candidate.updatedAt,
-    isPrivate: candidate.isPrivate,
-    bootstrap,
-  };
+  const candidateRepo = accessibleRepos.find(
+    (repo) => repo.owner.login === candidate.owner && repo.name === candidate.name
+  );
+
+  if (!candidateRepo) {
+    return null;
+  }
+
+  return await buildHomeRepoSummary(token, login, candidateRepo);
 }
 
 export async function getUserOrgs(token: string) {
@@ -186,6 +218,28 @@ export async function createRepo(token: string, name: string, org?: string) {
   }
 }
 
+export async function fetchFamilyMembers(
+  token: string,
+  owner: string,
+  repo: string
+): Promise<FamilyMember[]> {
+  const octokit = getOctokit(token);
+  const collabs = await octokit.paginate(octokit.repos.listCollaborators, {
+    owner,
+    repo,
+    per_page: 100,
+  });
+  const { stats } = await fetchStats(token, owner, repo);
+  const memberStats = stats.members as Record<string, StoredMemberStats | undefined>;
+
+  return collabs.map((collab) => ({
+    login: collab.login,
+    avatar_url: collab.avatar_url,
+    points: memberStats[collab.login]?.points ?? 0,
+    streak: memberStats[collab.login]?.streak ?? 0,
+  }));
+}
+
 /**
  * Commits a file to the repository. Useful for Workflows or stats.json.
  */
@@ -219,21 +273,22 @@ export async function inviteFamilyMember(
   repo: string,
   username: string,
   isOrg: boolean
-) {
+): Promise<FamilyInviteResult> {
   const octokit = getOctokit(token);
   try {
-    await octokit.repos.addCollaborator({
+    const response = await octokit.repos.addCollaborator({
       owner,
       repo,
       username,
       permission: getInvitePermission(isOrg),
     });
-    return { success: true } as const;
+    const inviteStatus = Number(response.status) === 204 ? 204 : 201;
+    return buildFamilyInviteResult(username, { status: inviteStatus });
   } catch (e) {
     const message =
       (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
       (e instanceof Error ? e.message : "GitHub rejected the collaborator invitation.");
-    return { success: false as const, error: message };
+    return buildFamilyInviteResult(username, { errorMessage: message });
   }
 }
 
@@ -300,6 +355,23 @@ export async function createTask(
     body,
     labels,
     assignees,
+  });
+  return data;
+}
+
+export async function updateTaskAssignees(
+  token: string,
+  owner: string,
+  repo: string,
+  issueNumber: number,
+  assignee: string | null
+) {
+  const octokit = getOctokit(token);
+  const { data } = await octokit.issues.update({
+    owner,
+    repo,
+    issue_number: issueNumber,
+    assignees: assignee ? [assignee] : [],
   });
   return data;
 }

@@ -2,43 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { UnauthorizedError, createApiErrorResponse } from "@/lib/api-errors";
-import { canCreateTask } from "@/lib/github-policy";
-import { createTask, fetchTasks } from "@/lib/github";
+import { canAssignTask } from "@/lib/github-policy";
+import { updateTaskAssignees } from "@/lib/github";
 import { enforceMutationRateLimit } from "@/lib/server-rate-limit";
 import { assertTrustedOrigin, getGitHubAuthContext, requireHomeRepoContext } from "@/lib/server-auth";
 
-const createTaskBodySchema = z.object({
-  title: z.string().trim().min(1),
-  body: z.string().default("Created via OctoHome"),
-  labels: z.array(z.string()).default([]),
+const updateTaskAssigneeSchema = z.object({
   assignee: z
     .string()
     .trim()
     .max(39)
     .regex(/^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?$/, "Enter a valid GitHub username.")
-    .nullable()
-    .optional(),
+    .nullable(),
 });
 
-/**
- * GET /api/tasks
- * Returns open issues (tasks) for the authenticated user's home repo.
- */
-export async function GET(req: NextRequest) {
-  try {
-    const { accessToken, owner, repo } = await requireHomeRepoContext(req);
-    const tasks = await fetchTasks(accessToken, owner, repo);
-    return NextResponse.json({ tasks });
-  } catch (error) {
-    return createApiErrorResponse(error);
-  }
-}
+type RouteContext = {
+  params: Promise<{
+    issueNumber: string;
+  }>;
+};
 
-/**
- * POST /api/tasks
- * Creates a new task (GitHub issue).
- */
-export async function POST(req: NextRequest) {
+export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
     assertTrustedOrigin(req);
     const authContext = await getGitHubAuthContext(req);
@@ -46,21 +30,28 @@ export async function POST(req: NextRequest) {
       throw new UnauthorizedError();
     }
     await enforceMutationRateLimit(req, {
-      bucket: "tasks-create",
+      bucket: "tasks-assign",
       login: authContext.login,
-      limit: 30,
+      limit: 60,
       window: "10 m",
     });
+    const body = updateTaskAssigneeSchema.parse(await req.json());
     const { accessToken, owner, repo, homeRepo } = await requireHomeRepoContext(req, {
       getAuthContext: async () => authContext,
     });
-    const body = createTaskBodySchema.parse(await req.json());
+    const { issueNumber: issueNumberParam } = await context.params;
+
+    if (!/^\d+$/.test(issueNumberParam)) {
+      return NextResponse.json({ error: "Invalid task number." }, { status: 400 });
+    }
+
+    const issueNumber = Number.parseInt(issueNumberParam, 10);
 
     if (
-      !canCreateTask({
+      !canAssignTask({
         actorLogin: authContext.login,
         actorPermission: homeRepo.viewer.permission,
-        assignee: body.assignee ?? null,
+        assignee: body.assignee,
       })
     ) {
       return NextResponse.json(
@@ -69,17 +60,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const task = await createTask(
-      accessToken,
-      owner,
-      repo,
-      body.title,
-      body.body,
-      body.labels,
-      body.assignee ? [body.assignee] : undefined
-    );
+    const task = await updateTaskAssignees(accessToken, owner, repo, issueNumber, body.assignee);
 
-    return NextResponse.json({ task }, { status: 201 });
+    return NextResponse.json({ task });
   } catch (error) {
     return createApiErrorResponse(error);
   }

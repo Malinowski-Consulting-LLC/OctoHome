@@ -19,6 +19,7 @@ import { ActionGroup } from "@/components/action-group";
 import { SurfaceCard } from "@/components/surface-card";
 import { GithubIcon } from "@/components/ui/github-icon";
 import { Input } from "@/components/ui/input";
+import type { FamilyInviteResult } from "@/lib/types";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
 
 type SetupResponse =
@@ -27,7 +28,7 @@ type SetupResponse =
       repoOwner: string;
       repoName: string;
       repoCreated: boolean;
-      inviteResults: Array<{ username: string; success: boolean; error?: string }>;
+      inviteResults: FamilyInviteResult[];
     }
   | {
       success?: false;

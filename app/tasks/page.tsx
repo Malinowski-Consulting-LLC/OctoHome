@@ -16,6 +16,7 @@ import { PageHeader } from "@/components/page-header";
 import RepoRequiredState from "@/components/repo-required-state";
 import Sidebar from "@/components/sidebar";
 import { SurfaceCard } from "@/components/surface-card";
+import { TaskAssignmentControl } from "@/components/task-assignment-control";
 import { Button } from "@/components/ui/button";
 import type { IssueTask } from "@/lib/types";
 import { useResolvedHomeRepo } from "@/lib/use-resolved-home-repo";
@@ -35,13 +36,15 @@ const labelChipClassName =
 
 export default function TasksPage() {
   const { magicEnabled } = useAppearanceStore();
-  const { status, error: repoError, refresh, repoOwner, repoName } = useResolvedHomeRepo();
+  const { status, error: repoError, refresh, repoOwner, repoName, viewer } = useResolvedHomeRepo();
   const [tasks, setTasks] = useState<IssueTask[]>([]);
+  const [memberLogins, setMemberLogins] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [filter, setFilter] = useState("All");
   const [showCelebration, setShowCelebration] = useState(false);
+  const [assigningTaskNumber, setAssigningTaskNumber] = useState<number | null>(null);
 
   useEffect(() => {
     if (status !== "ready" || !repoOwner || !repoName) return;
@@ -51,12 +54,34 @@ export default function TasksPage() {
       setError(null);
       setNotice(null);
       try {
-        const res = await fetch("/api/tasks", {
+        const tasksPromise = fetch("/api/tasks", {
           headers: { "x-octohome-repo-owner": repoOwner },
         });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error ?? "Failed to fetch tasks");
-        setTasks(json.tasks as IssueTask[]);
+        const familyPromise =
+          viewer?.canAssignOthers
+            ? fetch("/api/family", {
+                headers: { "x-octohome-repo-owner": repoOwner },
+              })
+            : null;
+
+        const tasksRes = await tasksPromise;
+        const tasksJson = await tasksRes.json();
+        if (!tasksRes.ok) throw new Error(tasksJson.error ?? "Failed to fetch tasks");
+        setTasks(tasksJson.tasks as IssueTask[]);
+
+        if (familyPromise) {
+          const familyRes = await familyPromise;
+          const familyJson = await familyRes.json();
+          if (familyRes.ok) {
+            setMemberLogins(
+              ((familyJson.members as Array<{ login: string }> | undefined) ?? []).map((member) => member.login)
+            );
+          } else {
+            setMemberLogins([]);
+          }
+        } else {
+          setMemberLogins([]);
+        }
       } catch (err) {
         setError((err as Error).message);
       } finally {
@@ -65,7 +90,7 @@ export default function TasksPage() {
     }
 
     void load();
-  }, [repoName, repoOwner, status]);
+  }, [repoName, repoOwner, status, viewer?.canAssignOthers]);
 
   if (status !== "ready") {
     return (
@@ -103,6 +128,53 @@ export default function TasksPage() {
     } catch {
       setTasks(snapshot);
       setError("Failed to complete task. Please try again.");
+    }
+  };
+
+  const handleAssign = async (issueNumber: number, assignee: string | null) => {
+    if (!repoOwner || !repoName) return;
+
+    const snapshot = tasks;
+    setAssigningTaskNumber(issueNumber);
+    setError(null);
+    setNotice(null);
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.number === issueNumber
+          ? {
+              ...task,
+              assignees: assignee ? [{ login: assignee }] : [],
+            }
+          : task
+      )
+    );
+
+    try {
+      const res = await fetch(`/api/tasks/${issueNumber}/assignment`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-octohome-repo-owner": repoOwner,
+        },
+        body: JSON.stringify({ assignee }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setTasks(snapshot);
+        setError(json.error ?? "Failed to update task assignee");
+        return;
+      }
+      setTasks((prev) =>
+        prev.map((task) => (task.number === issueNumber ? (json.task as IssueTask) : task))
+      );
+      setNotice(
+        assignee ? `Task #${issueNumber} is now assigned to ${assignee}.` : `Task #${issueNumber} is now unassigned.`
+      );
+    } catch {
+      setTasks(snapshot);
+      setError("Failed to update task assignee. Please try again.");
+    } finally {
+      setAssigningTaskNumber(null);
     }
   };
 
@@ -264,6 +336,15 @@ export default function TasksPage() {
                         Complete
                       </Button>
                     </div>
+
+                    <TaskAssignmentControl
+                      task={task}
+                      viewerLogin={viewer?.login ?? null}
+                      canAssignOthers={viewer?.canAssignOthers ?? false}
+                      memberLogins={memberLogins}
+                      isSubmitting={assigningTaskNumber === task.number}
+                      onAssign={(assignee) => handleAssign(task.number, assignee)}
+                    />
                   </SurfaceCard>
                 );
               })}

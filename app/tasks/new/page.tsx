@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
@@ -49,14 +49,19 @@ const fieldClassName =
 const textareaClassName =
   "min-h-36 w-full rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] px-4 py-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[color:var(--ring-color)]";
 
+const selectClassName =
+  "h-12 w-full rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] px-4 text-base font-medium text-foreground outline-none focus:border-[color:var(--ring-color)]";
+
 const primaryButtonClassName =
   "h-11 rounded-[var(--radius-control)] border border-[color:var(--accent-solid)] bg-[color:var(--accent-solid)] px-4 text-sm font-semibold normal-case tracking-normal text-[color:var(--app-bg)] shadow-none hover:opacity-90";
 
 export default function NewTaskPage() {
-  const { status, error: repoError, refresh, repoOwner, repoName } = useResolvedHomeRepo();
+  const { status, error: repoError, refresh, repoOwner, repoName, viewer } = useResolvedHomeRepo();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [memberLogins, setMemberLogins] = useState<string[]>([]);
+  const [selectedAssignee, setSelectedAssignee] = useState("");
 
   const {
     register,
@@ -72,6 +77,49 @@ export default function NewTaskPage() {
   });
 
   const selectedLabel = watch("label");
+  const canAssignOthers = viewer?.canAssignOthers ?? false;
+  const viewerLogin = viewer?.login ?? "";
+  const assigneeOptions = useMemo(
+    () =>
+      Array.from(new Set([viewerLogin, ...memberLogins].filter((login) => login.length > 0))).sort((left, right) =>
+        left.localeCompare(right)
+      ),
+    [memberLogins, viewerLogin]
+  );
+
+  useEffect(() => {
+    if (status !== "ready" || !repoOwner || !repoName || !canAssignOthers) {
+      setMemberLogins([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadMemberLogins() {
+      try {
+        const res = await fetch("/api/family", {
+          headers: { "x-octohome-repo-owner": repoOwner },
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error ?? "Failed to fetch family members");
+        if (!cancelled) {
+          setMemberLogins(
+            ((json.members as Array<{ login: string }> | undefined) ?? []).map((member) => member.login)
+          );
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setSubmitError((error as Error).message);
+        }
+      }
+    }
+
+    void loadMemberLogins();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canAssignOthers, repoName, repoOwner, status]);
 
   if (status !== "ready") {
     return (
@@ -102,8 +150,9 @@ export default function NewTaskPage() {
             title: values.title,
             body: values.description || "Created via OctoHome",
             labels: [values.label],
-        }),
-      });
+            assignee: selectedAssignee || null,
+          }),
+        });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Failed to create task");
       router.push("/tasks");
@@ -209,6 +258,57 @@ export default function NewTaskPage() {
                   className={textareaClassName}
                   placeholder="Add helpful notes, instructions, or context for the family."
                 />
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Assignment</p>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    Managers can assign any family member. Everyone else can choose to self-assign.
+                  </p>
+                </div>
+
+                {canAssignOthers ? (
+                  <label className="grid gap-2">
+                    <span className="text-sm font-medium text-foreground">Assign to</span>
+                    <select
+                      className={selectClassName}
+                      disabled={isSubmitting}
+                      value={selectedAssignee}
+                      onChange={(event) => setSelectedAssignee(event.target.value)}
+                    >
+                      <option value="">Unassigned</option>
+                      {assigneeOptions.map((login) => (
+                        <option key={login} value={login}>
+                          {login}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : viewerLogin ? (
+                  <button
+                    type="button"
+                    aria-pressed={selectedAssignee === viewerLogin}
+                    className={`inline-flex h-12 items-center justify-center rounded-[var(--radius-control)] border px-4 text-sm font-medium transition-colors ${
+                      selectedAssignee === viewerLogin
+                        ? "border-[color:var(--ring-color)] bg-[color:var(--interactive-hover)] text-foreground shadow-[var(--shadow-card)]"
+                        : "border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] text-muted-foreground hover:bg-[color:var(--interactive-hover)] hover:text-foreground"
+                    }`}
+                    onClick={() =>
+                      setSelectedAssignee((currentAssignee) =>
+                        currentAssignee === viewerLogin ? "" : viewerLogin
+                      )
+                    }
+                  >
+                    {selectedAssignee === viewerLogin ? "Assigned to you" : "Assign to me"}
+                  </button>
+                ) : null}
+
+                <p className="text-sm text-muted-foreground">
+                  {selectedAssignee
+                    ? `This task will start with ${selectedAssignee} as the assignee.`
+                    : "This task will start unassigned."}
+                </p>
               </div>
 
               {submitError ? (

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 
 import type { HomeRepoSummary } from "@/lib/github";
+import type { HomeViewer } from "@/lib/types";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
 
 export type ResolvedHomeRepoStatus =
@@ -16,6 +17,7 @@ export type ResolvedHomeRepoStatus =
 
 type HomeDiscoveryResponse = {
   repo?: HomeRepoSummary | null;
+  viewer?: HomeViewer | null;
   error?: string;
 };
 
@@ -29,13 +31,16 @@ export function useResolvedHomeRepo() {
   const { githubUsername, householdName, repoOwner, repoName, setGithubData } = useOnboardingStore();
   const [discovery, setDiscovery] = useState<DiscoveryState>({ kind: "idle" });
   const [refreshKey, setRefreshKey] = useState(0);
+  const [viewer, setViewer] = useState<HomeViewer | null>(null);
 
   const sessionLogin = session?.user?.login ?? "";
   const hasRepo = Boolean(repoOwner && repoName);
   const loginChanged = Boolean(githubUsername && sessionLogin && githubUsername !== sessionLogin);
   const requestedOwner = loginChanged ? "" : repoOwner;
   const shouldDiscover =
-    sessionStatus !== "loading" && Boolean(sessionLogin) && (loginChanged || !hasRepo || refreshKey > 0);
+    sessionStatus !== "loading" &&
+    Boolean(sessionLogin) &&
+    (loginChanged || !hasRepo || !viewer || refreshKey > 0);
 
   const refresh = useCallback(() => {
     setRefreshKey((current) => current + 1);
@@ -61,6 +66,7 @@ export function useResolvedHomeRepo() {
         }
 
         if (!res.ok) {
+          setViewer(null);
           setDiscovery({
             kind: "error",
             error: payload.error ?? "Could not reach GitHub.",
@@ -70,6 +76,7 @@ export function useResolvedHomeRepo() {
         }
 
         if (payload.repo) {
+          setViewer(payload.repo.viewer ?? payload.viewer ?? null);
           setGithubData({
             githubUsername: sessionLogin,
             repoOwner: payload.repo.owner,
@@ -81,6 +88,7 @@ export function useResolvedHomeRepo() {
           return;
         }
 
+        setViewer(null);
         setGithubData({
           githubUsername: sessionLogin,
           repoOwner: "",
@@ -94,6 +102,7 @@ export function useResolvedHomeRepo() {
           return;
         }
 
+        setViewer(null);
         setDiscovery({
           kind: "error",
           error: "Could not reach GitHub.",
@@ -132,6 +141,7 @@ export function useResolvedHomeRepo() {
     repoOwner,
     repoName,
     householdName,
+    viewer: status === "ready" ? viewer : null,
     hasRepo: status === "ready" && hasRepo,
   };
 }

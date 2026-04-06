@@ -16,13 +16,17 @@ export async function GET(req: NextRequest) {
     if (!accessToken) throw new UnauthorizedError();
 
     if (!login) {
-      return NextResponse.json({ repo: null });
+      return NextResponse.json({ repo: null, viewer: null });
     }
 
     const preferredOwner = req.headers.get("x-octohome-repo-owner")?.trim() || undefined;
     const repo = await findHomeRepo(accessToken, login, preferredOwner);
 
-    return NextResponse.json({ repo });
+    if (!repo) {
+      return NextResponse.json({ repo: null, viewer: null });
+    }
+
+    return NextResponse.json({ repo, viewer: repo.viewer });
   } catch (error) {
     return createApiErrorResponse(error);
   }

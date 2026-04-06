@@ -24,7 +24,17 @@ const setupSchema = z.object({
     .max(39)
     .regex(/^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?$/, "Invalid GitHub organization login")
     .optional(),
-  invitedMembers: z.array(z.string().trim().min(1).max(39)).max(50).default([]),
+  invitedMembers: z
+    .array(
+      z
+        .string()
+        .trim()
+        .min(1)
+        .max(39)
+        .regex(/^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?$/, "Enter a valid GitHub username.")
+    )
+    .max(50)
+    .default([]),
 });
 
 /**
@@ -118,9 +128,9 @@ export async function POST(req: NextRequest) {
       invitedMembers.map(async (member) => {
         const result = await inviteFamilyMember(accessToken, owner, repoName, member, isOrg);
         if (!result.success) {
-          console.error(`Failed to invite ${member}: ${result.error}`);
+          console.error("[onboarding-invite-failed]");
         }
-        return { username: member, ...result };
+        return result;
       })
     );
 

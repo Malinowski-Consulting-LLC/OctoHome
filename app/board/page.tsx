@@ -18,6 +18,7 @@ import { PageHeader } from "@/components/page-header";
 import RepoRequiredState from "@/components/repo-required-state";
 import Sidebar from "@/components/sidebar";
 import { SurfaceCard } from "@/components/surface-card";
+import { TaskAssignmentControl } from "@/components/task-assignment-control";
 import { Button } from "@/components/ui/button";
 import type { IssueTask } from "@/lib/types";
 import { useResolvedHomeRepo } from "@/lib/use-resolved-home-repo";
@@ -39,12 +40,14 @@ const labelChipClassName =
 
 export default function BoardPage() {
   const { magicEnabled } = useAppearanceStore();
-  const { status, error: repoError, refresh, repoOwner, repoName } = useResolvedHomeRepo();
+  const { status, error: repoError, refresh, repoOwner, repoName, viewer } = useResolvedHomeRepo();
   const [tasks, setTasks] = useState<IssueTask[]>([]);
+  const [memberLogins, setMemberLogins] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [assigningTaskNumber, setAssigningTaskNumber] = useState<number | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const doneMarkerRef = useRef<HTMLDivElement>(null);
@@ -58,12 +61,34 @@ export default function BoardPage() {
       setError(null);
       setNotice(null);
       try {
-        const res = await fetch("/api/board", {
+        const tasksPromise = fetch("/api/board", {
           headers: { "x-octohome-repo-owner": repoOwner },
         });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error ?? "Failed to fetch board");
-        setTasks(json.tasks as IssueTask[]);
+        const familyPromise =
+          viewer?.canAssignOthers
+            ? fetch("/api/family", {
+                headers: { "x-octohome-repo-owner": repoOwner },
+              })
+            : null;
+
+        const tasksRes = await tasksPromise;
+        const tasksJson = await tasksRes.json();
+        if (!tasksRes.ok) throw new Error(tasksJson.error ?? "Failed to fetch board");
+        setTasks(tasksJson.tasks as IssueTask[]);
+
+        if (familyPromise) {
+          const familyRes = await familyPromise;
+          const familyJson = await familyRes.json();
+          if (familyRes.ok) {
+            setMemberLogins(
+              ((familyJson.members as Array<{ login: string }> | undefined) ?? []).map((member) => member.login)
+            );
+          } else {
+            setMemberLogins([]);
+          }
+        } else {
+          setMemberLogins([]);
+        }
       } catch (err) {
         setError((err as Error).message);
       } finally {
@@ -72,7 +97,7 @@ export default function BoardPage() {
     }
 
     void load();
-  }, [repoName, repoOwner, status]);
+  }, [repoName, repoOwner, status, viewer?.canAssignOthers]);
 
   if (status !== "ready") {
     return (
@@ -111,6 +136,53 @@ export default function BoardPage() {
     } catch {
       setTasks(snapshot);
       setError("Failed to close task. Please try again.");
+    }
+  };
+
+  const handleAssign = async (issueNumber: number, assignee: string | null) => {
+    if (!repoOwner || !repoName) return;
+
+    const snapshot = tasks;
+    setAssigningTaskNumber(issueNumber);
+    setError(null);
+    setNotice(null);
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.number === issueNumber
+          ? {
+              ...task,
+              assignees: assignee ? [{ login: assignee }] : [],
+            }
+          : task
+      )
+    );
+
+    try {
+      const res = await fetch(`/api/tasks/${issueNumber}/assignment`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-octohome-repo-owner": repoOwner,
+        },
+        body: JSON.stringify({ assignee }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setTasks(snapshot);
+        setError(json.error ?? "Failed to update task assignee");
+        return;
+      }
+      setTasks((prev) =>
+        prev.map((task) => (task.number === issueNumber ? (json.task as IssueTask) : task))
+      );
+      setNotice(
+        assignee ? `Task #${issueNumber} is now assigned to ${assignee}.` : `Task #${issueNumber} is now unassigned.`
+      );
+    } catch {
+      setTasks(snapshot);
+      setError("Failed to update task assignee. Please try again.");
+    } finally {
+      setAssigningTaskNumber(null);
     }
   };
 
@@ -242,35 +314,47 @@ export default function BoardPage() {
                                 </div>
                               </div>
 
-                              <h3 className="mt-3 text-lg font-semibold leading-snug text-foreground">
-                                {task.title}
-                              </h3>
+                               <h3 className="mt-3 text-lg font-semibold leading-snug text-foreground">
+                                 {task.title}
+                               </h3>
 
-                              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                <p className="text-sm text-muted-foreground">
-                                  #{task.number} • {task.user?.login ?? "unknown"}
-                                </p>
+                               <div className="mt-4 space-y-4">
+                                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                   <p className="text-sm text-muted-foreground">
+                                     #{task.number} • {task.user?.login ?? "unknown"}
+                                   </p>
 
-                                {column.key === "Done" ? (
-                                  <span className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                                    <CheckCircle2 className="h-4 w-4" />
-                                    Closed
-                                  </span>
-                                ) : (
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className={quietButtonClassName}
-                                    onClick={() => handleMoveToDone(task.number)}
-                                  >
-                                    Mark done
-                                    <ArrowRight className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </div>
-                            </article>
-                          );
+                                   {column.key === "Done" ? (
+                                     <span className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                                       <CheckCircle2 className="h-4 w-4" />
+                                       Closed
+                                     </span>
+                                   ) : (
+                                     <Button
+                                       type="button"
+                                       variant="outline"
+                                       size="sm"
+                                       className={quietButtonClassName}
+                                       onClick={() => handleMoveToDone(task.number)}
+                                     >
+                                       Mark done
+                                       <ArrowRight className="h-4 w-4" />
+                                     </Button>
+                                   )}
+                                 </div>
+
+                                 <TaskAssignmentControl
+                                   task={task}
+                                   viewerLogin={viewer?.login ?? null}
+                                   canAssignOthers={viewer?.canAssignOthers ?? false}
+                                   memberLogins={memberLogins}
+                                   isSubmitting={assigningTaskNumber === task.number}
+                                   onAssign={(assignee) => handleAssign(task.number, assignee)}
+                                   interactive={column.key !== "Done"}
+                                 />
+                               </div>
+                             </article>
+                           );
                         })
                       ) : (
                         <div className="rounded-[var(--radius-control)] border border-dashed border-[color:var(--border-subtle)] bg-[color:var(--surface-2)] px-4 py-10 text-center text-sm font-medium text-muted-foreground">

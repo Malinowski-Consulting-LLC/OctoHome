@@ -9,6 +9,24 @@ export type RepoStats = {
 };
 
 export type InvitePermission = "push" | "triage";
+export type RepoPermission = "admin" | "maintain" | "write" | "triage" | "read" | "none";
+export type RepoPermissionSource = {
+  role_name?: string | null;
+  permissions?: {
+    admin?: boolean;
+    maintain?: boolean;
+    push?: boolean;
+    triage?: boolean;
+    pull?: boolean;
+  } | null;
+};
+
+export type HomeViewer = {
+  login: string;
+  permission: RepoPermission;
+  canManageFamily: boolean;
+  canAssignOthers: boolean;
+};
 
 export type HomeRepoCandidate = {
   owner: string;
@@ -31,6 +49,145 @@ const repoStatsSchema = z.object({
 
 export function getInvitePermission(isOrg: boolean): InvitePermission {
   return isOrg ? "triage" : "push";
+}
+
+export function normalizeRepoPermission(permission?: string | null): RepoPermission {
+  switch (permission) {
+    case "admin":
+    case "maintain":
+    case "write":
+    case "triage":
+    case "read":
+      return permission;
+    default:
+      return "none";
+  }
+}
+
+export function canManageHousehold(permission: RepoPermission): boolean {
+  return permission === "admin" || permission === "maintain";
+}
+
+export function resolveRepoPermission(source: RepoPermissionSource): RepoPermission {
+  const normalizedRole = normalizeRepoPermission(source.role_name);
+  if (normalizedRole !== "none") {
+    return normalizedRole;
+  }
+
+  if (source.permissions?.admin) {
+    return "admin";
+  }
+
+  if (source.permissions?.maintain) {
+    return "maintain";
+  }
+
+  if (source.permissions?.push) {
+    return "write";
+  }
+
+  if (source.permissions?.triage) {
+    return "triage";
+  }
+
+  if (source.permissions?.pull) {
+    return "read";
+  }
+
+  return "none";
+}
+
+export function buildHomeViewer(login: string, permission?: string | null): HomeViewer {
+  const normalizedPermission = normalizeRepoPermission(permission);
+  const canManage = canManageHousehold(normalizedPermission);
+
+  return {
+    login,
+    permission: normalizedPermission,
+    canManageFamily: canManage,
+    canAssignOthers: canManage,
+  };
+}
+
+export function canAssignTask(input: {
+  actorLogin: string;
+  actorPermission: RepoPermission;
+  assignee: string | null;
+}): boolean {
+  if (canManageHousehold(input.actorPermission)) {
+    return true;
+  }
+
+  if (!input.assignee) {
+    return false;
+  }
+
+  return input.actorLogin.toLowerCase() === input.assignee.toLowerCase();
+}
+
+export function canCreateTask(input: {
+  actorLogin: string;
+  actorPermission: RepoPermission;
+  assignee: string | null;
+}): boolean {
+  if (canManageHousehold(input.actorPermission)) {
+    return true;
+  }
+
+  if (!input.assignee) {
+    return true;
+  }
+
+  return input.actorLogin.toLowerCase() === input.assignee.toLowerCase();
+}
+
+function sanitizeFamilyInviteFailure(errorMessage: string) {
+  const normalizedMessage = errorMessage.toLowerCase();
+
+  if (
+    normalizedMessage.includes("not found") ||
+    normalizedMessage.includes("could not resolve to a user")
+  ) {
+    return "Could not invite that GitHub user. Check the username and try again.";
+  }
+
+  if (
+    normalizedMessage.includes("rate limit") ||
+    normalizedMessage.includes("secondary rate") ||
+    normalizedMessage.includes("abuse detection")
+  ) {
+    return "GitHub temporarily blocked the invitation. Please wait a moment and try again.";
+  }
+
+  return "GitHub could not complete that invitation right now. Please try again.";
+}
+
+export function buildFamilyInviteResult(
+  username: string,
+  input:
+    | { status: 201 | 204 }
+    | {
+        errorMessage: string;
+      }
+) {
+  if ("errorMessage" in input) {
+    return {
+      username,
+      success: false,
+      status: "failed" as const,
+      message: sanitizeFamilyInviteFailure(input.errorMessage),
+    };
+  }
+
+  return {
+    username,
+    success: true,
+    status: input.status === 204 ? ("already_has_access" as const) : ("invited" as const),
+    message:
+      input.status === 204
+        ? `${username} already has access to this household repository.`
+        : `Invitation sent to ${username}.`,
+  };
 }
 
 export function selectHomeRepoCandidate(
