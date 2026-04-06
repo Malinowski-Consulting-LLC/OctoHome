@@ -1,16 +1,40 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Sidebar from "@/components/sidebar";
-import RepoRequiredState from "@/components/repo-required-state";
-import { CheckCircle, ListTodo, Plus, Loader2, AlertCircle } from "lucide-react";
+
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import {
+  AlertCircle,
+  CheckCircle,
+  ListTodo,
+  Loader2,
+  Plus,
+} from "lucide-react";
+
 import { MagicalCelebration } from "@/components/magic/magical-celebration";
-import { useResolvedHomeRepo } from "@/lib/use-resolved-home-repo";
+import { PageHeader } from "@/components/page-header";
+import RepoRequiredState from "@/components/repo-required-state";
+import Sidebar from "@/components/sidebar";
+import { SurfaceCard } from "@/components/surface-card";
+import { Button } from "@/components/ui/button";
 import type { IssueTask } from "@/lib/types";
+import { useResolvedHomeRepo } from "@/lib/use-resolved-home-repo";
+import { useAppearanceStore } from "@/store/use-appearance-store";
+
+const eyebrowClassName =
+  "inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground";
+
+const actionLinkClassName =
+  "inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-[color:var(--interactive-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring-color)] sm:w-auto";
+
+const quietButtonClassName =
+  "h-10 rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] px-3 text-sm font-medium normal-case tracking-normal text-foreground shadow-none hover:bg-[color:var(--interactive-hover)]";
+
+const labelChipClassName =
+  "rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] px-2.5 py-1 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground";
 
 export default function TasksPage() {
+  const { magicEnabled } = useAppearanceStore();
   const { status, error: repoError, refresh, repoOwner, repoName } = useResolvedHomeRepo();
   const [tasks, setTasks] = useState<IssueTask[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,6 +45,7 @@ export default function TasksPage() {
 
   useEffect(() => {
     if (status !== "ready" || !repoOwner || !repoName) return;
+
     async function load() {
       setLoading(true);
       setError(null);
@@ -38,15 +63,18 @@ export default function TasksPage() {
         setLoading(false);
       }
     }
-    load();
+
+    void load();
   }, [repoName, repoOwner, status]);
 
   if (status !== "ready") {
     return (
-      <div className="flex min-h-screen bg-white">
+      <div className="flex min-h-screen bg-background text-foreground">
         <Sidebar />
-        <main className="flex-1 p-12 overflow-y-auto">
-          <RepoRequiredState status={status} error={repoError} onRetry={refresh} />
+        <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-10">
+          <div className="mx-auto max-w-5xl">
+            <RepoRequiredState status={status} error={repoError} onRetry={refresh} />
+          </div>
         </main>
       </div>
     );
@@ -54,9 +82,9 @@ export default function TasksPage() {
 
   const handleComplete = async (num: number) => {
     if (!repoOwner || !repoName) return;
-    // Optimistic remove — keep a snapshot to roll back on failure.
+
     const snapshot = tasks;
-    setTasks((prev) => prev.filter((t) => t.number !== num));
+    setTasks((prev) => prev.filter((task) => task.number !== num));
     try {
       const res = await fetch(`/api/tasks/${num}`, {
         method: "PATCH",
@@ -70,106 +98,179 @@ export default function TasksPage() {
         return;
       }
       setNotice(json.warning ?? null);
-      setShowCelebration(true);
+      if (magicEnabled) {
+        setShowCelebration(true);
+      }
     } catch {
       setTasks(snapshot);
       setError("Failed to complete task. Please try again.");
     }
   };
 
-  const filteredTasks = filter === "All"
-    ? tasks
-    : tasks.filter(t => t.labels.some(l => l.name === filter));
+  const filteredTasks =
+    filter === "All"
+      ? tasks
+      : tasks.filter((task) => task.labels.some((label) => label.name === filter));
 
-  const uniqueLabels = ["All", ...Array.from(new Set(tasks.flatMap(t => t.labels.map(l => l.name))))];
+  const uniqueLabels = [
+    "All",
+    ...Array.from(new Set(tasks.flatMap((task) => task.labels.map((label) => label.name)))),
+  ];
 
   return (
-    <div className="flex min-h-screen bg-white">
-      <MagicalCelebration active={showCelebration} onComplete={() => setShowCelebration(false)} />
+    <div className="relative flex min-h-screen overflow-hidden bg-background text-foreground [transform:translateZ(0)]">
+      <MagicalCelebration active={magicEnabled && showCelebration} onComplete={() => setShowCelebration(false)} />
       <Sidebar />
-      <main className="flex-1 p-12 overflow-y-auto">
-        <header className="flex justify-between items-center mb-12">
-          <div>
-            <h1 className="text-6xl font-black uppercase tracking-tighter flex items-center gap-4">
-              <ListTodo className="w-12 h-12" /> Household Tasks
-            </h1>
-            <p className="text-2xl font-bold text-zinc-600 mt-2">
-              Everything that needs doing in your home.
-            </p>
-          </div>
-          <Link href="/tasks/new">
-            <Button size="lg" className="h-20 text-2xl px-10 border-8 border-black">
-              <Plus className="w-8 h-8 mr-2" /> NEW TASK
-            </Button>
-          </Link>
-        </header>
 
-        <div className="flex gap-4 mb-8 overflow-x-auto pb-4">
-          {uniqueLabels.map(label => (
-            <button
-              key={label}
-              onClick={() => setFilter(label)}
-              className={`px-6 py-3 border-4 font-black uppercase text-xl transition-all ${
-                filter === label ? "bg-black text-white border-black" : "border-zinc-200 hover:border-black"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+      <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-10">
+        <div className="mx-auto flex max-w-6xl flex-col gap-6">
+          <div className="space-y-3">
+            <span className={eyebrowClassName}>
+              <ListTodo className="h-3.5 w-3.5" />
+              Tasks
+            </span>
+            <PageHeader
+              title="Household tasks"
+              subtitle="Keep every current chore in view and close work out as soon as it is done."
+              actions={
+                <>
+                  <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] px-3 py-2 text-sm font-medium text-muted-foreground">
+                    {loading ? "Loading…" : `${tasks.length} open`}
+                  </span>
+                  <Link href="/tasks/new" className={actionLinkClassName}>
+                    <Plus className="h-4 w-4" />
+                    New task
+                  </Link>
+                </>
+              }
+            />
+          </div>
 
-        {notice ? (
-          <div className="mb-8 border-4 border-amber-500 bg-amber-50 p-6">
-            <p className="text-lg font-black uppercase text-amber-700">{notice}</p>
-          </div>
-        ) : null}
+          <SurfaceCard tone="subtle" className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-foreground">Filter by label</h2>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  Show every task or narrow the list to a single household category.
+                </p>
+              </div>
 
-        {error ? (
-          <div className="border-8 border-red-600 p-12 flex items-center gap-6">
-            <AlertCircle className="w-12 h-12 text-red-600 flex-shrink-0" />
-            <p className="text-2xl font-black uppercase text-red-600">{error}</p>
-          </div>
-        ) : loading ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <Loader2 className="w-16 h-16 animate-spin" />
-            <p className="text-2xl font-black uppercase">Loading Tasks...</p>
-          </div>
-        ) : filteredTasks.length === 0 ? (
-          <div className="border-8 border-black border-dashed p-24 text-center">
-            <CheckCircle className="w-24 h-24 mx-auto mb-6 text-zinc-300" />
-            <h2 className="text-4xl font-black uppercase mb-2">Zero Tasks!</h2>
-            <p className="text-xl font-bold text-zinc-500">You&apos;re all caught up. Enjoy the family time.</p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {filteredTasks.map((task) => (
-              <div key={task.number} className="border-8 border-black p-8 flex items-center justify-between group hover:bg-zinc-50 transition-colors">
-                <div className="flex-1">
-                  <div className="flex gap-2 mb-4">
-                    {task.labels.map((l) => (
-                      <span key={l.name} className="border-2 border-black px-3 py-1 text-sm font-black uppercase bg-zinc-100">
-                        {l.name}
-                      </span>
-                    ))}
-                  </div>
-                  <h3 className="text-4xl font-black tracking-tight leading-none group-hover:underline underline-offset-8">
-                    {task.title}
-                  </h3>
-                  <p className="text-xl font-bold text-zinc-500 mt-4">
-                    #{task.number} • Opened by {task.user?.login ?? "unknown"}
+              <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] px-3 py-2 text-sm font-medium text-muted-foreground">
+                {filteredTasks.length} visible
+              </span>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {uniqueLabels.map((label) => {
+                const isSelected = filter === label;
+
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    aria-pressed={isSelected}
+                    onClick={() => setFilter(label)}
+                      className={`max-w-full rounded-full border px-3 py-2 text-left text-sm font-medium whitespace-normal break-words transition-colors ${
+                        isSelected
+                          ? "border-[color:var(--ring-color)] bg-[color:var(--interactive-hover)] text-foreground shadow-[var(--shadow-card)]"
+                          : "border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] text-muted-foreground hover:bg-[color:var(--interactive-hover)] hover:text-foreground"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </SurfaceCard>
+
+          {notice ? (
+            <SurfaceCard tone="accent" className="border-[color:var(--border-strong)]">
+              <div className="flex items-start gap-3">
+                <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-foreground" />
+                <p className="text-sm leading-6 text-foreground">{notice}</p>
+              </div>
+            </SurfaceCard>
+          ) : null}
+
+          {error ? (
+            <SurfaceCard>
+              <div className="flex items-start gap-3">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground">Could not load tasks</h2>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{error}</p>
+                </div>
+              </div>
+            </SurfaceCard>
+          ) : loading ? (
+            <SurfaceCard>
+              <div className="flex flex-col items-center gap-3 py-10 text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <div>
+                  <p className="text-base font-semibold text-foreground">Loading tasks…</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Fetching the current task list from GitHub.
                   </p>
                 </div>
-                <button 
-                  onClick={() => handleComplete(task.number)}
-                  className="w-20 h-20 border-8 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all transform active:scale-90"
-                  aria-label="Complete Task"
-                >
-                  <CheckCircle className="w-12 h-12" />
-                </button>
               </div>
-            ))}
-          </div>
-        )}
+            </SurfaceCard>
+          ) : filteredTasks.length === 0 ? (
+            <SurfaceCard tone="subtle">
+              <div className="flex flex-col items-center gap-3 py-10 text-center">
+                <CheckCircle className="h-10 w-10 text-muted-foreground" />
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground">Nothing left in this view</h2>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    {filter === "All"
+                      ? "You are all caught up for now."
+                      : `No tasks currently use the ${filter} label.`}
+                  </p>
+                </div>
+              </div>
+            </SurfaceCard>
+          ) : (
+            <div className="space-y-4">
+              {filteredTasks.map((task) => {
+                const taskLabels =
+                  task.labels.length > 0 ? task.labels : [{ name: "Household" }];
+
+                return (
+                  <SurfaceCard key={task.number} tone="subtle" className="space-y-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap gap-2">
+                          {taskLabels.map((label) => (
+                            <span key={label.name} className={labelChipClassName}>
+                              {label.name}
+                            </span>
+                          ))}
+                        </div>
+
+                        <h2 className="mt-3 text-base font-semibold leading-snug text-foreground">
+                          {task.title}
+                        </h2>
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                          #{task.number} • Opened by {task.user?.login ?? "unknown"}
+                        </p>
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className={`${quietButtonClassName} w-full sm:w-auto`}
+                        onClick={() => handleComplete(task.number)}
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        Complete
+                      </Button>
+                    </div>
+                  </SurfaceCard>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </main>
     </div>
   );

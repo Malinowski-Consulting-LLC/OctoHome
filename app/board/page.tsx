@@ -1,17 +1,41 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Sidebar from "@/components/sidebar";
-import RepoRequiredState from "@/components/repo-required-state";
-import { KanbanSquare, Loader2, MoreHorizontal, ArrowRight, AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { MagicalCelebration } from "@/components/magic/magical-celebration";
+
+import {
+  AlertCircle,
+  ArrowRight,
+  CheckCircle2,
+  KanbanSquare,
+  Loader2,
+} from "lucide-react";
+
+import { BoardColumnShell } from "@/components/board-column-shell";
 import { AnimatedBeam } from "@/components/magic/animated-beam";
+import { MagicalCelebration } from "@/components/magic/magical-celebration";
+import { MetricCard } from "@/components/metric-card";
+import { PageHeader } from "@/components/page-header";
+import RepoRequiredState from "@/components/repo-required-state";
+import Sidebar from "@/components/sidebar";
+import { SurfaceCard } from "@/components/surface-card";
+import { Button } from "@/components/ui/button";
+import type { IssueTask } from "@/lib/types";
 import { useResolvedHomeRepo } from "@/lib/use-resolved-home-repo";
 import { useAppearanceStore } from "@/store/use-appearance-store";
-import type { IssueTask } from "@/lib/types";
 
-const COLUMNS = ["Open", "Done"];
+const COLUMNS = [
+  { key: "Open", emptyLabel: "No open tasks right now." },
+  { key: "Done", emptyLabel: "Nothing completed yet." },
+] as const;
+
+const eyebrowClassName =
+  "inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground";
+
+const quietButtonClassName =
+  "h-10 rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] px-3 text-sm font-medium normal-case tracking-normal text-foreground shadow-none hover:bg-[color:var(--interactive-hover)]";
+
+const labelChipClassName =
+  "rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] px-2.5 py-1 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground";
 
 export default function BoardPage() {
   const { magicEnabled } = useAppearanceStore();
@@ -21,13 +45,14 @@ export default function BoardPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
-  
+
   const containerRef = useRef<HTMLDivElement>(null);
-  const doneHeaderRef = useRef<HTMLDivElement>(null);
-  const sidebarTargetRef = useRef<HTMLDivElement>(null);
+  const doneMarkerRef = useRef<HTMLDivElement>(null);
+  const sidebarTargetRef = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
     if (status !== "ready" || !repoOwner || !repoName) return;
+
     async function load() {
       setLoading(true);
       setError(null);
@@ -45,15 +70,18 @@ export default function BoardPage() {
         setLoading(false);
       }
     }
-    load();
+
+    void load();
   }, [repoName, repoOwner, status]);
 
   if (status !== "ready") {
     return (
-      <div className="flex min-h-screen bg-zinc-50 font-sans">
+      <div className="flex min-h-screen bg-background text-foreground">
         <Sidebar />
-        <main className="flex-1 p-12 overflow-y-auto">
-          <RepoRequiredState status={status} error={repoError} onRetry={refresh} />
+        <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-10">
+          <div className="mx-auto max-w-5xl">
+            <RepoRequiredState status={status} error={repoError} onRetry={refresh} />
+          </div>
         </main>
       </div>
     );
@@ -61,9 +89,10 @@ export default function BoardPage() {
 
   const handleMoveToDone = async (num: number) => {
     if (!repoOwner || !repoName) return;
-    // Optimistic update — keep a snapshot for rollback on failure.
+
     const snapshot = tasks;
-    setTasks((prev) => prev.map(t => t.number === num ? { ...t, state: "closed" } : t));
+    setTasks((prev) => prev.map((task) => (task.number === num ? { ...task, state: "closed" } : task)));
+
     try {
       const res = await fetch(`/api/tasks/${num}`, {
         method: "PATCH",
@@ -77,115 +106,185 @@ export default function BoardPage() {
         return;
       }
       setNotice(json.warning ?? null);
-      setShowCelebration(true);
+      if (magicEnabled) {
+        setShowCelebration(true);
+      }
     } catch {
       setTasks(snapshot);
       setError("Failed to close task. Please try again.");
     }
   };
 
-  const getColumnTasks = (col: string) => {
-    if (col === "Done") return tasks.filter(t => t.state === "closed");
-    return tasks.filter(t => t.state !== "closed");
-  };
+  const openTasks = tasks.filter((task) => task.state !== "closed");
+  const doneTasks = tasks.filter((task) => task.state === "closed");
+  const columns = [
+    { ...COLUMNS[0], tasks: openTasks },
+    { ...COLUMNS[1], tasks: doneTasks },
+  ];
 
   return (
-    <div className="flex min-h-screen bg-zinc-50 font-sans" ref={containerRef}>
-      <MagicalCelebration active={showCelebration} onComplete={() => setShowCelebration(false)} />
+    <div
+      ref={containerRef}
+      className="relative flex min-h-screen overflow-hidden bg-background text-foreground [transform:translateZ(0)]"
+    >
+      <MagicalCelebration active={magicEnabled && showCelebration} onComplete={() => setShowCelebration(false)} />
       {magicEnabled ? (
-        <AnimatedBeam 
-          containerRef={containerRef} 
-          fromRef={doneHeaderRef} 
-          toRef={sidebarTargetRef} 
+        <AnimatedBeam
+          containerRef={containerRef}
+          fromRef={doneMarkerRef}
+          toRef={sidebarTargetRef}
           curvature={-100}
           duration={3}
         />
       ) : null}
-      <Sidebar familyRef={sidebarTargetRef as any} />
-      <main className="flex-1 p-12 flex flex-col overflow-hidden">
-        <header className="mb-12">
-          <h1 className="text-6xl font-black uppercase tracking-tighter flex items-center gap-4">
-            <KanbanSquare className="w-12 h-12" /> Family Board
-          </h1>
-          <p className="text-2xl font-bold text-zinc-600 mt-2">
-            Track open tasks and completed chores.
-          </p>
-        </header>
 
-        {notice ? (
-          <div className="mb-8 border-4 border-amber-500 bg-amber-50 p-6">
-            <p className="text-lg font-black uppercase text-amber-700">{notice}</p>
-          </div>
-        ) : null}
+      <Sidebar familyRef={sidebarTargetRef} />
 
-        {error ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="border-8 border-red-600 p-12 flex items-center gap-6">
-              <AlertCircle className="w-12 h-12 text-red-600 flex-shrink-0" />
-              <p className="text-2xl font-black uppercase text-red-600">{error}</p>
-            </div>
+      <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-10">
+        <div className="mx-auto flex max-w-7xl flex-col gap-6">
+          <div className="space-y-3">
+            <span className={eyebrowClassName}>
+              <KanbanSquare className="h-3.5 w-3.5" />
+              Board
+            </span>
+            <PageHeader
+              title="Family board"
+              subtitle="Track open tasks and completed chores without losing sight of the household flow."
+              actions={
+                <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] px-3 py-2 text-sm font-medium text-muted-foreground">
+                  {tasks.length} cards
+                </span>
+              }
+            />
           </div>
-        ) : loading ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4">
-            <Loader2 className="w-16 h-16 animate-spin" />
-            <p className="text-2xl font-black uppercase">Organizing the Board...</p>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <MetricCard
+              label="Open tasks"
+              value={openTasks.length}
+              icon={<KanbanSquare className="h-5 w-5 text-muted-foreground" />}
+            />
+            <MetricCard
+              label="Completed tasks"
+              value={doneTasks.length}
+              icon={<CheckCircle2 className="h-5 w-5 text-muted-foreground" />}
+            />
           </div>
-        ) : (
-          <div className="flex-1 flex gap-8 overflow-x-auto pb-8">
-            {COLUMNS.map(col => (
-              <div key={col} className="w-96 flex-shrink-0 flex flex-col">
-                <div 
-                  ref={col === "Done" ? doneHeaderRef : null}
-                  className="border-b-8 border-black pb-4 mb-6 flex justify-between items-end bg-white p-4 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                >
-                  <h2 className="text-3xl font-black uppercase tracking-tight">{col}</h2>
-                  <span className="text-xl font-black bg-black text-white px-3 py-1">{getColumnTasks(col).length}</span>
-                </div>
-                
-                <div className="flex-1 space-y-6 overflow-y-auto pr-2">
-                  {getColumnTasks(col).map((task) => (
-                    <div key={task.number} className="border-4 border-black p-6 bg-white hover:translate-x-1 hover:-translate-y-1 transition-transform shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] group">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="flex gap-1 flex-wrap">
-                          {task.labels.filter(l => !l.name.startsWith("Status:")).map((l) => (
-                            <span key={l.name} className="text-[10px] font-black uppercase px-2 py-0.5 border border-black">
-                              {l.name}
-                            </span>
-                          ))}
-                        </div>
-                        <button className="text-zinc-400 hover:text-black">
-                          <MoreHorizontal className="w-5 h-5" />
-                        </button>
-                      </div>
-                      <h3 className="text-xl font-black leading-tight mb-4 group-hover:underline">{task.title}</h3>
-                      <div className="flex justify-between items-center">
-                        <div className="w-8 h-8 rounded-full border-2 border-black bg-zinc-100 flex items-center justify-center text-xs font-bold">
-                          {(task.user?.login ?? "?").slice(0, 2).toUpperCase()}
-                        </div>
-                        {col !== "Done" && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 border-2 font-black text-xs"
-                            onClick={() => handleMoveToDone(task.number)}
-                          >
-                            DONE <ArrowRight className="w-3 h-3 ml-1" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {getColumnTasks(col).length === 0 && (
-                    <div className="border-4 border-black border-dashed h-32 flex items-center justify-center text-zinc-300 font-black uppercase">
-                      Empty
-                    </div>
-                  )}
+
+          {notice ? (
+            <SurfaceCard tone="accent" className="border-[color:var(--border-strong)]">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-foreground" />
+                <p className="text-sm leading-6 text-foreground">{notice}</p>
+              </div>
+            </SurfaceCard>
+          ) : null}
+
+          {error ? (
+            <SurfaceCard>
+              <div className="flex items-start gap-3">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground">Could not load the board</h2>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{error}</p>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+            </SurfaceCard>
+          ) : loading ? (
+            <SurfaceCard>
+              <div className="flex flex-col items-center gap-3 py-10 text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <div>
+                  <p className="text-base font-semibold text-foreground">Organizing the board…</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Pulling the latest household tasks from GitHub.
+                  </p>
+                </div>
+              </div>
+            </SurfaceCard>
+          ) : (
+            <div className="grid gap-4 sm:gap-5 lg:grid-cols-2 lg:gap-6 lg:items-start">
+              {columns.map((column) => (
+                <div key={column.key} className="relative min-w-0">
+                  {column.key === "Done" ? (
+                    <div
+                      ref={doneMarkerRef}
+                      aria-hidden="true"
+                      className="pointer-events-none absolute right-6 top-6 h-3 w-3 rounded-full opacity-0 sm:right-8 sm:top-8"
+                    />
+                  ) : null}
+
+                  <BoardColumnShell title={column.key} count={column.tasks.length}>
+                    <div className="space-y-3">
+                      {column.tasks.length ? (
+                        column.tasks.map((task) => {
+                          const visibleLabels = task.labels.filter(
+                            (label) => !label.name.startsWith("Status:")
+                          );
+                          const taskLabels =
+                            visibleLabels.length > 0 ? visibleLabels : [{ name: "Household" }];
+
+                          return (
+                            <article
+                              key={task.number}
+                              className="rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] p-4 shadow-[var(--shadow-card)] transition-colors hover:bg-[color:var(--surface-1)]"
+                            >
+                              <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div className="flex flex-wrap gap-2">
+                                  {taskLabels.map((label) => (
+                                    <span key={label.name} className={labelChipClassName}>
+                                      {label.name}
+                                    </span>
+                                  ))}
+                                </div>
+
+                                <div className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] text-sm font-medium text-muted-foreground">
+                                  {(task.user?.login ?? "?").slice(0, 2).toUpperCase()}
+                                </div>
+                              </div>
+
+                              <h3 className="mt-3 text-lg font-semibold leading-snug text-foreground">
+                                {task.title}
+                              </h3>
+
+                              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <p className="text-sm text-muted-foreground">
+                                  #{task.number} • {task.user?.login ?? "unknown"}
+                                </p>
+
+                                {column.key === "Done" ? (
+                                  <span className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                                    <CheckCircle2 className="h-4 w-4" />
+                                    Closed
+                                  </span>
+                                ) : (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className={quietButtonClassName}
+                                    onClick={() => handleMoveToDone(task.number)}
+                                  >
+                                    Mark done
+                                    <ArrowRight className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </article>
+                          );
+                        })
+                      ) : (
+                        <div className="rounded-[var(--radius-control)] border border-dashed border-[color:var(--border-subtle)] bg-[color:var(--surface-2)] px-4 py-10 text-center text-sm font-medium text-muted-foreground">
+                          {column.emptyLabel}
+                        </div>
+                      )}
+                    </div>
+                  </BoardColumnShell>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </main>
     </div>
   );
