@@ -3,6 +3,8 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/magic-utils";
 
+import { useAppearanceStore } from "@/store/use-appearance-store";
+
 interface EnergyOrbProps {
   state: "idle" | "thinking" | "speaking" | "error";
   className?: string;
@@ -10,6 +12,8 @@ interface EnergyOrbProps {
 
 export const EnergyOrb = ({ state, className }: EnergyOrbProps) => {
   const shouldReduceMotion = useReducedMotion();
+  const magicEnabled = useAppearanceStore((currentState) => currentState.magicEnabled);
+  const shouldAnimate = !shouldReduceMotion && magicEnabled;
 
   const variants = {
     idle: {
@@ -41,32 +45,30 @@ export const EnergyOrb = ({ state, className }: EnergyOrbProps) => {
     <div className={cn("relative flex items-center justify-center", className)} aria-hidden="true">
       {/* Background Glow */}
       <motion.div
-        animate={shouldReduceMotion ? {} : variants[state]}
+        animate={shouldAnimate ? variants[state] : {}}
         className={cn(
-          "absolute w-full h-full rounded-full blur-2xl opacity-50",
-          state === "idle" && "bg-zinc-400",
-          state === "thinking" && "bg-blue-500",
-          state === "speaking" && "bg-green-500",
-          state === "error" && "bg-red-500"
+          "absolute inset-2 rounded-full bg-[image:var(--hero-glow)] opacity-40 blur-xl",
+          state === "error" && "opacity-30"
         )}
       />
       
       {/* Core Orb */}
       <motion.div
-        animate={shouldReduceMotion ? {} : variants[state]}
+        animate={shouldAnimate ? variants[state] : {}}
         className={cn(
-          "relative w-3/4 h-3/4 border-8 border-black bg-white rounded-full flex items-center justify-center shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]",
-          state === "thinking" && "border-blue-600",
-          state === "speaking" && "border-green-600",
-          state === "error" && "border-red-600"
+          "relative flex h-3/4 w-3/4 items-center justify-center rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] shadow-[var(--shadow-card)]",
+          state === "thinking" && "bg-[color:var(--interactive-hover)]",
+          state === "speaking" && "border-[color:var(--border-strong)]",
+          state === "error" && "border-[color:var(--border-strong)] bg-[color:var(--surface-2)]"
         )}
       >
         <div className={cn(
           "w-4 h-4 rounded-full",
-          state === "idle" && "bg-black",
-          state === "thinking" && "bg-blue-600 animate-pulse",
-          state === "speaking" && "bg-green-600",
-          state === "error" && "bg-red-600"
+          state === "idle" && "bg-[color:var(--accent-solid)]",
+          state === "thinking" && "bg-[color:var(--accent-solid)]",
+          state === "speaking" && "bg-[color:var(--accent-solid)] opacity-80",
+          state === "error" && "bg-[color:var(--accent-solid)] opacity-60",
+          shouldAnimate && state === "thinking" && "animate-pulse-slow"
         )} />
       </motion.div>
 
