@@ -5,10 +5,12 @@ import {
   buildFamilyInviteResult,
   buildHomeViewer,
   canAssignTask,
+  canCompleteTask,
   canCreateTask,
   canManageHousehold,
   getInvitePermission,
   parseRepoStats,
+  resolveTaskCompletionCreditLogin,
   resolveRepoPermission,
   selectHomeRepoCandidate,
 } from "./github-policy.ts";
@@ -141,6 +143,80 @@ test("canCreateTask blocks non-managers from assigning a new task to someone els
       assignee: "hubot",
     }),
     false
+  );
+});
+
+test("canCompleteTask lets non-managers complete unassigned tasks", () => {
+  assert.equal(
+    canCompleteTask({
+      actorLogin: "octocat",
+      actorPermission: "triage",
+      assignees: [],
+    }),
+    true
+  );
+});
+
+test("canCompleteTask lets assignees complete their own assigned tasks", () => {
+  assert.equal(
+    canCompleteTask({
+      actorLogin: "octocat",
+      actorPermission: "triage",
+      assignees: ["hubot", "OCTOCAT"],
+    }),
+    true
+  );
+});
+
+test("canCompleteTask blocks non-managers from completing someone else's assigned task", () => {
+  assert.equal(
+    canCompleteTask({
+      actorLogin: "octocat",
+      actorPermission: "triage",
+      assignees: ["hubot"],
+    }),
+    false
+  );
+});
+
+test("canCompleteTask allows managers to complete any assigned task", () => {
+  assert.equal(
+    canCompleteTask({
+      actorLogin: "octocat",
+      actorPermission: "maintain",
+      assignees: ["hubot"],
+    }),
+    true
+  );
+});
+
+test("resolveTaskCompletionCreditLogin credits the actor when a task is unassigned", () => {
+  assert.equal(
+    resolveTaskCompletionCreditLogin({
+      actorLogin: "octocat",
+      assignees: [],
+    }),
+    "octocat"
+  );
+});
+
+test("resolveTaskCompletionCreditLogin credits the matching assignee when present", () => {
+  assert.equal(
+    resolveTaskCompletionCreditLogin({
+      actorLogin: "octocat",
+      assignees: ["hubot", "OCTOCAT"],
+    }),
+    "OCTOCAT"
+  );
+});
+
+test("resolveTaskCompletionCreditLogin falls back to the first assignee for manager-assisted completion", () => {
+  assert.equal(
+    resolveTaskCompletionCreditLogin({
+      actorLogin: "octocat",
+      assignees: ["hubot", "teammate"],
+    }),
+    "hubot"
   );
 });
 

@@ -141,6 +141,35 @@ export function canCreateTask(input: {
   return input.actorLogin.toLowerCase() === input.assignee.toLowerCase();
 }
 
+export function canCompleteTask(input: {
+  actorLogin: string;
+  actorPermission: RepoPermission;
+  assignees: string[];
+}): boolean {
+  if (canManageHousehold(input.actorPermission)) {
+    return true;
+  }
+
+  if (input.assignees.length === 0) {
+    return true;
+  }
+
+  const normalizedActor = input.actorLogin.toLowerCase();
+  return input.assignees.some((assignee) => assignee.toLowerCase() === normalizedActor);
+}
+
+export function resolveTaskCompletionCreditLogin(input: {
+  actorLogin: string;
+  assignees: string[];
+}): string {
+  const normalizedActor = input.actorLogin.toLowerCase();
+  const matchingAssignee = input.assignees.find(
+    (assignee) => assignee.toLowerCase() === normalizedActor
+  );
+
+  return matchingAssignee ?? input.assignees[0] ?? input.actorLogin;
+}
+
 function sanitizeFamilyInviteFailure(errorMessage: string) {
   const normalizedMessage = errorMessage.toLowerCase();
 

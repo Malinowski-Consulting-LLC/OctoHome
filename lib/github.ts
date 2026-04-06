@@ -376,6 +376,16 @@ export async function updateTaskAssignees(
   return data;
 }
 
+export async function fetchTask(token: string, owner: string, repo: string, issueNumber: number) {
+  const octokit = getOctokit(token);
+  const { data } = await octokit.issues.get({
+    owner,
+    repo,
+    issue_number: issueNumber,
+  });
+  return data;
+}
+
 /**
  * Completes a task by closing the issue.
  */
