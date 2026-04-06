@@ -19,7 +19,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ repo: null });
     }
 
-    const repo = await findHomeRepo(accessToken, login);
+    const preferredOwner = req.headers.get("x-octohome-repo-owner")?.trim() || undefined;
+    const repo = await findHomeRepo(accessToken, login, preferredOwner);
 
     return NextResponse.json({ repo });
   } catch (error) {

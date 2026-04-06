@@ -1,8 +1,16 @@
 # OctoHome
+Provided by [Malinowski Consulting, LLC](https://malinowski.consulting).
 
-OctoHome turns GitHub into a household operating system. It uses GitHub sign-in, issues, labels, collaborators, Actions, and lightweight repo data to help a family manage chores, recurring routines, and day-to-day home operations.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FMalinowski-Consulting-LLC%2FOctoHome)
+Proof of concept for a GitHub-backed home management system.
+
+Based on the idea that GitHub's features can be repurposed for home management, and that families might enjoy a bit of octocat magic in their daily routines. [Read more](https://github.com/social-impact/insights/perspectives/03-17-2026-github-for-everyone)
+
+Create your home-ops repo and get started today! 
+
+[![Launch App](https://img.shields.io/badge/Launch-OctoHome-blue?style=for-the-badge&logo=github)](https://octo-home.vercel.app/)
+
+Powered by GitHub, designed for households.
 
 ## What OctoHome does
 
@@ -34,7 +42,7 @@ OctoHome turns GitHub into a household operating system. It uses GitHub sign-in,
 - **Zustand** for client-side onboarding and app state
 - **Tauri** desktop wrapper under `src-tauri/` that loads the hosted OctoHome web app in production
 
-## Deploying to production (Vercel)
+## Deploying to production (Vercel), if you want to self-host
 
 ### One-click deploy
 
@@ -63,6 +71,8 @@ In your Vercel project go to **Settings → Environment Variables** and add:
 | `GITHUB_ID` | Client ID from your GitHub OAuth App. |
 | `GITHUB_SECRET` | Client Secret from your GitHub OAuth App. |
 | `APP_URL` | Canonical URL of your deployment, e.g. `https://your-project.vercel.app`. Optional for the web app itself, but required for desktop release builds because the Tauri wrapper embeds it at compile time. |
+| `UPSTASH_REDIS_REST_URL` | Required in production for mutating API rate limits. Create an Upstash Redis database and copy its REST URL. |
+| `UPSTASH_REDIS_REST_TOKEN` | Required in production for mutating API rate limits. Copy the REST token from the same Upstash Redis database. |
 
 ### Step 3 — Deploy
 
@@ -104,6 +114,9 @@ AUTH_SECRET=<generate with: openssl rand -base64 32>
 GITHUB_ID=your_github_oauth_app_client_id
 GITHUB_SECRET=your_github_oauth_app_client_secret
 APP_URL=http://localhost:3000
+# Optional locally, required in production for mutating API routes:
+UPSTASH_REDIS_REST_URL=https://your-upstash-endpoint.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your_upstash_rest_token
 ```
 
 Create a GitHub OAuth App for local development with:

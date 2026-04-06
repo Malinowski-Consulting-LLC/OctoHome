@@ -17,13 +17,17 @@ jobs:
   ci:
     name: Lint and build web app
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          persist-credentials: false
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          node-version: lts/*
+          node-version: '24.14.0'
           cache: 'npm'
 
       - name: Install dependencies
@@ -35,14 +39,12 @@ jobs:
       - name: Build Next.js app
         run: npm run build
         env:
-          # lib/env.ts validates these at module-load time via Zod.
-          # A clean runner has no .env.local, so they must be injected explicitly.
-          # GitHub reserves the GITHUB_* prefix for system use, so the repository
-          # secrets must be named GH_ID / GH_SECRET instead.
-          # Set them at: Settings → Secrets and variables → Actions → Secrets
-          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-          GH_ID: ${{ secrets.GH_ID }}
-          GH_SECRET: ${{ secrets.GH_SECRET }}
+          # The CI build only needs non-empty placeholders to satisfy env
+          # validation at module-load time. Real OAuth secrets are not required
+          # and should not be exposed to pull_request builds.
+          AUTH_SECRET: ci-auth-secret
+          GH_ID: ci-client-id
+          GH_SECRET: ci-client-secret
           # APP_URL is intentionally omitted: it is optional in the Zod schema
           # (undefined passes; an empty string from an unset variable would fail).
 
@@ -87,12 +89,14 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          persist-credentials: false
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          node-version: lts/*
+          node-version: '24.14.0'
           cache: 'npm'
 
       # Fail fast before spending minutes on a Rust compile if APP_URL is absent.
@@ -127,7 +131,7 @@ jobs:
         shell: bash
 
       - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
         with:
           # macOS cross-compilation targets; ignored on other platforms
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}

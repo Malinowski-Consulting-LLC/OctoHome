@@ -91,16 +91,17 @@ export default function NewTaskPage() {
 
     setIsSubmitting(true);
     setSubmitError(null);
-    try {
-      const res = await fetch("/api/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          owner: repoOwner,
-          repo: repoName,
-          title: values.title,
-          body: values.description || "Created via OctoHome",
-          labels: [values.label],
+      try {
+        const res = await fetch("/api/tasks", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-octohome-repo-owner": repoOwner,
+          },
+          body: JSON.stringify({
+            title: values.title,
+            body: values.description || "Created via OctoHome",
+            labels: [values.label],
         }),
       });
       const json = await res.json();

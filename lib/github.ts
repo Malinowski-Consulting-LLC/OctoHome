@@ -1,16 +1,16 @@
 import { Octokit } from "@octokit/rest";
 
-import { applyMemberActivity, type StoredMemberStats } from "@/lib/member-stats";
+import {
+  getInvitePermission,
+  parseRepoStats,
+  selectHomeRepoCandidate,
+  type RepoStats,
+} from "@/lib/github-policy";
+import { applyMemberActivity } from "@/lib/member-stats";
 
 export function getOctokit(token: string) {
   return new Octokit({ auth: token });
 }
-
-type RepoStats = {
-  household?: string;
-  members: Record<string, StoredMemberStats | undefined>;
-  createdAt?: string;
-};
 
 /** Bootstrap data written to stats.json during onboarding. */
 export type HomeBootstrap = {
@@ -36,7 +36,7 @@ function isNotFoundError(e: unknown): boolean {
   return (e as { status?: number })?.status === 404;
 }
 
-/** Returns true only for HTTP 403 responses (e.g. missing org scope). */
+/** Returns true only for HTTP 403 responses from the GitHub API. */
 function isForbiddenError(e: unknown): boolean {
   return (e as { status?: number })?.status === 403;
 }
@@ -70,48 +70,21 @@ async function tryReadBootstrap(
 }
 
 /**
- * Discovers the user's home-ops repository.
- * Checks the user's personal account first, then all orgs they belong to.
- * Returns null if no home-ops repo is accessible.
- *
- * Only expected "not found" (404) and "no org scope" (403) errors are
- * swallowed. All other failures (network errors, server errors, rate-limit
- * responses, etc.) are re-thrown so callers can handle them properly.
+ * Discovers the user's accessible home-ops repository.
+ * When a preferred owner is provided, only that specific owner/home-ops pair is
+ * considered valid; otherwise we search the authenticated user's accessible
+ * repositories and pick the most recently updated home-ops repo.
  */
-export async function findHomeRepo(token: string, login: string): Promise<HomeRepoSummary | null> {
+export async function findHomeRepo(
+  token: string,
+  login: string,
+  preferredOwner?: string
+): Promise<HomeRepoSummary | null> {
   const octokit = getOctokit(token);
 
-  // Check personal account first
-  try {
-    const { data } = await octokit.repos.get({ owner: login, repo: "home-ops" });
-    const bootstrap = await tryReadBootstrap(token, data.owner.login, data.name);
-    return {
-      owner: data.owner.login,
-      name: data.name,
-      updatedAt: data.updated_at,
-      isPrivate: data.private,
-      bootstrap,
-    };
-  } catch (e) {
-    if (!isNotFoundError(e)) throw e;
-    // 404 — repo absent from personal account; fall through to org check
-  }
-
-  // List orgs; a 403 here means the token lacks org-listing scope — that is
-  // expected and we just skip the org scan rather than failing entirely.
-  let orgs: Array<{ login: string }>;
-  try {
-    const { data } = await octokit.orgs.listForAuthenticatedUser();
-    orgs = data;
-  } catch (e) {
-    if (!isForbiddenError(e)) throw e;
-    // 403 — no org scope; skip org scan
-    return null;
-  }
-
-  for (const org of orgs) {
+  if (preferredOwner) {
     try {
-      const { data } = await octokit.repos.get({ owner: org.login, repo: "home-ops" });
+      const { data } = await octokit.repos.get({ owner: preferredOwner, repo: "home-ops" });
       const bootstrap = await tryReadBootstrap(token, data.owner.login, data.name);
       return {
         owner: data.owner.login,
@@ -121,12 +94,43 @@ export async function findHomeRepo(token: string, login: string): Promise<HomeRe
         bootstrap,
       };
     } catch (e) {
-      if (!isNotFoundError(e)) throw e;
-      // 404 — not in this org; continue scanning
+      if (!isNotFoundError(e) && !isForbiddenError(e)) throw e;
+      return null;
     }
   }
 
-  return null;
+  const accessibleRepos = await octokit.paginate(octokit.repos.listForAuthenticatedUser, {
+    visibility: "all",
+    affiliation: "owner,collaborator,organization_member",
+    sort: "updated",
+    per_page: 100,
+  });
+
+  const candidate = selectHomeRepoCandidate(
+    accessibleRepos.map((repo) => ({
+      owner: repo.owner.login,
+      name: repo.name,
+      updatedAt:
+        repo.updated_at ??
+        repo.created_at ??
+        repo.pushed_at ??
+        "1970-01-01T00:00:00.000Z",
+      isPrivate: repo.private,
+    }))
+  );
+
+  if (!candidate) {
+    return null;
+  }
+
+  const bootstrap = await tryReadBootstrap(token, candidate.owner, candidate.name);
+  return {
+    owner: candidate.owner,
+    name: candidate.name,
+    updatedAt: candidate.updatedAt,
+    isPrivate: candidate.isPrivate,
+    bootstrap,
+  };
 }
 
 export async function getUserOrgs(token: string) {
@@ -209,19 +213,27 @@ export async function commitFile(
 /**
  * Invites a family member to the repository.
  */
-export async function inviteFamilyMember(token: string, owner: string, repo: string, username: string) {
+export async function inviteFamilyMember(
+  token: string,
+  owner: string,
+  repo: string,
+  username: string,
+  isOrg: boolean
+) {
   const octokit = getOctokit(token);
   try {
-    const { data } = await octokit.repos.addCollaborator({
+    await octokit.repos.addCollaborator({
       owner,
       repo,
       username,
-      permission: "push",
+      permission: getInvitePermission(isOrg),
     });
-    return data;
+    return { success: true } as const;
   } catch (e) {
-    console.error(`Failed to invite ${username}`, e);
-    return null;
+    const message =
+      (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+      (e instanceof Error ? e.message : "GitHub rejected the collaborator invitation.");
+    return { success: false as const, error: message };
   }
 }
 
@@ -324,7 +336,7 @@ export async function fetchStats(
       throw new Error("stats.json is not a file");
     }
     const content = Buffer.from(data.content, "base64").toString();
-    const stats = JSON.parse(content) as RepoStats;
+    const stats = parseRepoStats(content);
     return { stats, sha: data.sha };
   } catch (e) {
     if (!isNotFoundError(e)) throw e;

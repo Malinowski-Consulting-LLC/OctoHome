@@ -66,10 +66,11 @@ export default function RoutinesPage() {
     try {
       const res = await fetch("/api/templates", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-octohome-repo-owner": homeRepo.repoOwner,
+        },
         body: JSON.stringify({
-          owner: repoOwner,
-          repo: repoName,
           title,
           days: selectedDays,
         }),

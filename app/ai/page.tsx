@@ -88,7 +88,11 @@ export default function AICopilotPage() {
     try {
       const res = await fetch("/api/ai", {
         method: "POST",
-        body: JSON.stringify({ prompt: userText, repoOwner, repoName }),
+        headers: {
+          "Content-Type": "application/json",
+          "x-octohome-repo-owner": repoOwner,
+        },
+        body: JSON.stringify({ prompt: userText }),
       });
       const data = await res.json();
 

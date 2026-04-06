@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import Sidebar from "@/components/sidebar";
-import { Database, Github, LogOut, Settings, Shield } from "lucide-react";
+import { Database, LogOut, Settings, Shield } from "lucide-react";
 import { ActionGroup } from "@/components/action-group";
 import { AppearanceSettingsCard } from "@/components/appearance-settings-card";
 import { PageHeader } from "@/components/page-header";
 import { SurfaceCard } from "@/components/surface-card";
+import { GithubIcon } from "@/components/ui/github-icon";
 import { useResolvedHomeRepo } from "@/lib/use-resolved-home-repo";
 import { cn } from "@/lib/utils";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
@@ -105,7 +106,7 @@ export default function SettingsPage() {
           <SurfaceCard aria-labelledby="account-settings-heading" className="space-y-6">
             <div className="max-w-2xl">
               <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Github className="h-4 w-4" />
+                <GithubIcon className="h-4 w-4" />
                 Connected account
               </div>
               <h2 id="account-settings-heading" className="mt-2 text-xl font-semibold text-foreground">
@@ -136,7 +137,7 @@ export default function SettingsPage() {
             <ActionGroup>
               {accountUrl ? (
                 <a href={accountUrl} target="_blank" rel="noreferrer" className={actionClassName}>
-                  <Github className="h-4 w-4" />
+                  <GithubIcon className="h-4 w-4" />
                   Open GitHub
                 </a>
               ) : (

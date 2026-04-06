@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Atkinson_Hyperlegible } from "next/font/google";
+import { getServerSession } from "next-auth";
 import Script from "next/script";
 import "./globals.css";
-import { auth } from "@/auth";
+import { authOptions } from "@/auth";
 import { AppearanceProvider } from "@/components/appearance-provider";
 import { SessionProvider } from "next-auth/react";
 import { getAppearanceBootstrapScript } from "@/lib/appearance";
@@ -24,7 +25,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
+  const session = await getServerSession(authOptions);
 
   return (
     <html

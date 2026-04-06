@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { AlertCircle, Github, Home, Loader2 } from "lucide-react";
+import { AlertCircle, Home, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { GithubIcon } from "@/components/ui/github-icon";
 import { PageHeader } from "@/components/page-header";
 import { SurfaceCard } from "@/components/surface-card";
 import { ActionGroup } from "@/components/action-group";
@@ -41,7 +42,7 @@ export default function RepoRequiredState({
     return (
       <SurfaceCard>
         <div className="flex items-start gap-4">
-          <Github className="mt-1 h-6 w-6 shrink-0 text-muted-foreground" />
+          <GithubIcon className="mt-1 h-6 w-6 shrink-0 text-muted-foreground" />
           <div className="space-y-4">
             <PageHeader
               title="Sign in to continue"

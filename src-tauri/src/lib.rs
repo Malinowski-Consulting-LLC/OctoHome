@@ -1,4 +1,5 @@
 use tauri::{WebviewUrl, WebviewWindowBuilder};
+use url::Url;
 
 /// Resolve the production app URL.
 ///
@@ -22,6 +23,40 @@ fn resolve_app_url() -> &'static str {
     }
 }
 
+fn validate_app_url(url: &Url) {
+    if cfg!(debug_assertions) {
+        return;
+    }
+
+    assert_eq!(
+        url.scheme(),
+        "https",
+        "APP_URL must use https in release builds"
+    );
+
+    let host = url.host_str().expect("APP_URL must include a hostname");
+    assert!(
+        !host.eq_ignore_ascii_case("localhost"),
+        "APP_URL must not point to localhost in release builds"
+    );
+    assert!(
+        host.parse::<std::net::IpAddr>().is_err(),
+        "APP_URL must use a public hostname rather than a raw IP address in release builds"
+    );
+    assert!(
+        url.username().is_empty() && url.password().is_none(),
+        "APP_URL must not include embedded credentials"
+    );
+}
+
+fn is_allowed_navigation(target: &Url, app_url: &Url) -> bool {
+    let same_origin = target.scheme() == app_url.scheme()
+        && target.host_str() == app_url.host_str()
+        && target.port_or_known_default() == app_url.port_or_known_default();
+
+    same_origin || (target.scheme() == "https" && matches!(target.host_str(), Some("github.com")))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -35,10 +70,13 @@ pub fn run() {
             }
 
             let url = resolve_app_url()
-                .parse::<url::Url>()
+                .parse::<Url>()
                 .expect("APP_URL is not a valid URL");
+            validate_app_url(&url);
+            let allowed_navigation_url = url.clone();
 
             WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url))
+                .on_navigation(move |target| is_allowed_navigation(target, &allowed_navigation_url))
                 .title("OctoHome")
                 .inner_size(1280.0, 800.0)
                 .min_inner_size(800.0, 600.0)

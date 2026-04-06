@@ -6,7 +6,6 @@ import { signIn, useSession } from "next-auth/react";
 import {
   ArrowRight,
   ExternalLink,
-  Github,
   Home,
   Loader2,
   Plus,
@@ -18,6 +17,7 @@ import { motion } from "framer-motion";
 
 import { ActionGroup } from "@/components/action-group";
 import { SurfaceCard } from "@/components/surface-card";
+import { GithubIcon } from "@/components/ui/github-icon";
 import { Input } from "@/components/ui/input";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
 
@@ -27,7 +27,7 @@ type SetupResponse =
       repoOwner: string;
       repoName: string;
       repoCreated: boolean;
-      inviteResults: Array<{ username: string; success: boolean }>;
+      inviteResults: Array<{ username: string; success: boolean; error?: string }>;
     }
   | {
       success?: false;
@@ -220,7 +220,7 @@ export default function OnboardingWizard() {
 
                   <ActionGroup>
                     <button type="button" onClick={() => signIn("github")} className={primaryButtonClassName}>
-                      <Github className="h-4 w-4" />
+                      <GithubIcon className="h-4 w-4" />
                       Connect GitHub
                     </button>
                     <a
@@ -368,7 +368,7 @@ export default function OnboardingWizard() {
                   className="rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] p-5 text-left transition-colors hover:bg-[color:var(--interactive-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring-color)]"
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-[color:var(--surface-1)] text-foreground">
-                    <Github className="h-5 w-5" />
+                    <GithubIcon className="h-5 w-5" />
                   </div>
                   <h3 className="mt-4 text-base font-semibold text-foreground">Personal account</h3>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">
