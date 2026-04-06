@@ -1,13 +1,25 @@
 "use client";
 
-import { useSession, signIn } from "next-auth/react";
-import { useOnboardingStore } from "@/store/use-onboarding-store";
+import type { ReactNode } from "react";
 import { useState } from "react";
-import { Home, ArrowRight, Github, Users, Rocket, ExternalLink, Plus, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { MorphingCard } from "./magic/morphing-card";
+import { signIn, useSession } from "next-auth/react";
+import {
+  ArrowRight,
+  ExternalLink,
+  Github,
+  Home,
+  Loader2,
+  Plus,
+  Rocket,
+  Sparkles,
+  Users,
+} from "lucide-react";
 import { motion } from "framer-motion";
+
+import { ActionGroup } from "@/components/action-group";
+import { SurfaceCard } from "@/components/surface-card";
+import { Input } from "@/components/ui/input";
+import { useOnboardingStore } from "@/store/use-onboarding-store";
 
 type SetupResponse =
   | {
@@ -25,6 +37,61 @@ type SetupResponse =
     };
 
 const PRODUCT_RELEASES_URL = "https://github.com/Malinowski-Consulting-LLC/OctoHome/releases";
+
+const stepMeta = [
+  {
+    eyebrow: "Step 1",
+    title: "Name your household",
+    description:
+      "Pick the friendly name OctoHome will show around the app. Your GitHub repo still stays on the home-ops setup path.",
+  },
+  {
+    eyebrow: "Step 2",
+    title: "Choose where the repo lives",
+    description:
+      "Decide whether OctoHome should create the household repo under your personal account or a GitHub organization.",
+  },
+  {
+    eyebrow: "Step 3",
+    title: "Invite your family",
+    description:
+      "Add GitHub usernames now so OctoHome can invite everyone as the repository comes online.",
+  },
+  {
+    eyebrow: "Step 4",
+    title: "Launch your workspace",
+    description:
+      "OctoHome will create the repo, set up labels, and invite the people you selected.",
+  },
+  {
+    eyebrow: "Done",
+    title: "Welcome home",
+    description:
+      "Your household workspace is live. Open the repo, grab the desktop build, or head straight into the dashboard.",
+  },
+] as const;
+
+const baseButtonClassName =
+  "inline-flex items-center justify-center gap-2 rounded-[var(--radius-control)] px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring-color)] disabled:cursor-not-allowed disabled:opacity-60";
+
+const primaryButtonClassName = `${baseButtonClassName} border border-transparent bg-[color:var(--accent-solid)] text-[color:var(--app-bg)] hover:opacity-90`;
+const secondaryButtonClassName = `${baseButtonClassName} border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] text-foreground hover:bg-[color:var(--interactive-hover)]`;
+const inputClassName =
+  "h-14 rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] px-4 text-base font-medium normal-case not-italic shadow-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-[color:var(--ring-color)]";
+const infoPanelClassName =
+  "rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-2)] p-4";
+
+function SignedOutFeature(props: { title: string; description: string; icon: ReactNode }) {
+  return (
+    <div className="rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] p-4">
+      <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-[color:var(--surface-1)] text-foreground">
+        {props.icon}
+      </div>
+      <h2 className="mt-4 text-base font-semibold text-foreground">{props.title}</h2>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">{props.description}</p>
+    </div>
+  );
+}
 
 export default function OnboardingWizard() {
   const { data: session } = useSession();
@@ -48,6 +115,7 @@ export default function OnboardingWizard() {
   const [inviteFailures, setInviteFailures] = useState<string[]>([]);
 
   const nextStep = () => setStep(step + 1);
+  const currentStep = Math.min(step, stepMeta.length - 1);
 
   const handleBlastOff = async () => {
     setBlastError(null);
@@ -91,8 +159,8 @@ export default function OnboardingWizard() {
             continue;
           }
 
-          const msg = "error" in data ? data.error : "Setup failed. Please try again.";
-          setBlastError(msg);
+          const message = "error" in data ? data.error : "Setup failed. Please try again.";
+          setBlastError(message);
           return;
         }
 
@@ -122,273 +190,417 @@ export default function OnboardingWizard() {
 
   if (!session) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-white text-black text-center relative overflow-hidden">
-        {/* Animated Background Grid */}
-        <div
-          className="absolute inset-0 z-0 opacity-10 pointer-events-none"
-          style={{
-            backgroundImage:
-              "linear-gradient(#000 2px, transparent 2px), linear-gradient(90deg, #000 2px, transparent 2px)",
-            backgroundSize: "40px 40px",
-          }}
-        />
+      <div className="min-h-screen bg-background px-4 py-6 text-foreground sm:px-6 lg:px-10 lg:py-10">
+        <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col justify-center gap-6">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+          >
+            <SurfaceCard tone="accent" data-card-role="hero" className="relative overflow-hidden">
+              <div
+                className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[image:var(--hero-glow)] opacity-50 blur-3xl"
+                data-magic-effect
+              />
+              <div className="relative z-10 space-y-6">
+                <div className="space-y-6">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                    <Home className="h-3.5 w-3.5" />
+                    Household setup
+                  </div>
+                  <div className="space-y-3">
+                    <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+                      Bring your family workspace online.
+                    </h1>
+                    <p className="max-w-2xl text-base leading-7 text-muted-foreground">
+                      OctoHome turns GitHub into a calm household operating system: shared tasks, family streaks, AI
+                      capture, and a setup flow built for mobile or desktop.
+                    </p>
+                  </div>
 
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.8, ease: "backOut" }}
-          className="relative z-10"
-        >
-          <Home className="w-24 h-24 mb-8 text-black mx-auto" aria-hidden="true" />
-          <h1 className="text-7xl font-black mb-6 tracking-tighter uppercase leading-none">
-            OctoHome
-          </h1>
-          <p className="text-2xl mb-12 max-w-xl font-bold italic border-l-8 border-black pl-6 ml-4 text-left">
-            The most accessible way to manage your household using GitHub.
-          </p>
-          <button
-            onClick={() => signIn("github")}
-            className="bg-black text-white px-12 py-6 rounded-none font-black text-3xl hover:translate-x-2 hover:-translate-y-2 transition-all focus-ring uppercase border-8 border-black flex items-center gap-4 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] hover:shadow-[20px_20px_0px_0px_rgba(0,0,0,1)]"
-          >
-            <Github className="w-10 h-10" /> Connect GitHub
-          </button>
-          <p
-            className="mt-12 text-lg underline cursor-pointer font-black uppercase tracking-widest"
-            onClick={() => window.open("https://github.com/signup")}
-          >
-            Don&apos;t have an account? Create one{" "}
-            <ExternalLink className="inline w-5 h-5 ml-1" />
-          </p>
-        </motion.div>
+                  <ActionGroup>
+                    <button type="button" onClick={() => signIn("github")} className={primaryButtonClassName}>
+                      <Github className="h-4 w-4" />
+                      Connect GitHub
+                    </button>
+                    <a
+                      href="https://github.com/signup"
+                      target="_blank"
+                      rel="noreferrer"
+                      className={secondaryButtonClassName}
+                    >
+                      Create GitHub account
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </ActionGroup>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <SignedOutFeature
+                    title="Shared family repo"
+                    description="Keep chores, routines, and points in one GitHub-backed household workspace."
+                    icon={<Users className="h-5 w-5" />}
+                  />
+                  <SignedOutFeature
+                    title="AI task capture"
+                    description="Describe a chore in plain language and turn it into a structured GitHub issue."
+                    icon={<Sparkles className="h-5 w-5" />}
+                  />
+                  <SignedOutFeature
+                    title="Responsive everywhere"
+                    description="Use the same household control surface on desktop, tablet, mobile, or PWA install."
+                    icon={<Home className="h-5 w-5" />}
+                  />
+                </div>
+              </div>
+            </SurfaceCard>
+          </motion.div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-zinc-50 p-6 relative overflow-hidden">
-      {/* Animated Background Grid */}
-      <div
-        className="absolute inset-0 z-0 opacity-5 pointer-events-none"
-        style={{
-          backgroundImage:
-            "linear-gradient(#000 2px, transparent 2px), linear-gradient(90deg, #000 2px, transparent 2px)",
-          backgroundSize: "60px 60px",
-        }}
-      />
-
-      <MorphingCard step={step} className="z-10 w-full max-w-2xl">
-        {step === 0 && (
-          <div className="space-y-10">
-            <h2 className="text-5xl font-black uppercase tracking-tight italic">House Name</h2>
-            <div className="space-y-4">
-              <Input
-                id="household-name"
-                type="text"
-                placeholder="e.g. The Smith Family"
-                className="h-24 text-3xl italic"
-                value={householdName}
-                onChange={(e) => setGithubData({ householdName: e.target.value })}
-              />
-            </div>
-            <button
-              onClick={nextStep}
-              disabled={!householdName.trim()}
-              className="w-full bg-black text-white p-8 text-3xl font-black uppercase hover:bg-zinc-800 flex items-center justify-center gap-4 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-black"
-            >
-              Continue <ArrowRight className="w-10 h-10" />
-            </button>
+    <div className="min-h-screen bg-background px-4 py-6 text-foreground sm:px-6 lg:px-10 lg:py-10">
+      <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col justify-center gap-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Household setup</p>
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+              Build your OctoHome workspace
+            </h1>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Connect GitHub, choose your storage model, and invite everyone who should share the household repo.
+            </p>
           </div>
-        )}
+          <span className="inline-flex items-center justify-center rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] px-3 py-2 text-sm font-medium text-muted-foreground">
+            Step {currentStep + 1} of {stepMeta.length}
+          </span>
+        </div>
 
-        {step === 1 && (
-          <div className="space-y-10">
-            <h2 className="text-5xl font-black uppercase tracking-tight italic">Storage Type</h2>
-            <div className="grid grid-cols-1 gap-6">
-              <button
-                onClick={() => {
-                  setGithubData({ isOrg: false, orgLogin: "" });
-                  nextStep();
-                }}
-                className={`p-10 border-8 text-left transition-all group ${
-                  !isOrg ? "border-black bg-black text-white" : "border-zinc-200 hover:border-black"
-                }`}
-              >
-                <h3 className="text-4xl font-black uppercase mb-2">Personal</h3>
-                <p className="text-xl font-bold opacity-80 uppercase">
-                  Simple storage in your profile.
-                </p>
-              </button>
-              <button
-                onClick={() => {
-                  setGithubData({ isOrg: true });
-                  nextStep();
-                }}
-                className={`p-10 border-8 text-left transition-all group ${
-                  isOrg ? "border-black bg-black text-white" : "border-zinc-200 hover:border-black"
-                }`}
-              >
-                <h3 className="text-4xl font-black uppercase mb-2">Organization</h3>
-                <p className="text-xl font-bold opacity-80 uppercase">
-                  Shared space for everyone.
-                </p>
-              </button>
-            </div>
-          </div>
-        )}
+        <div className="grid grid-cols-5 gap-2">
+          {stepMeta.map((meta, index) => {
+            const isActive = index === currentStep;
+            const isComplete = index < currentStep;
 
-        {step === 2 && (
-          <div className="space-y-10">
-            {isOrg && (
-              <div className="space-y-4">
-                <h2 className="text-5xl font-black uppercase tracking-tight italic">
-                  Org Login
-                </h2>
-                <Input
-                  id="org-login"
-                  type="text"
-                  placeholder="e.g. smith-family-org"
-                  className="h-24 text-3xl italic"
-                  value={orgLogin}
-                  onChange={(e) => setGithubData({ orgLogin: e.target.value })}
-                />
-                <p className="text-sm font-bold uppercase text-zinc-500">
-                  Enter your exact GitHub organization login name (not the display name).
-                </p>
-              </div>
-            )}
-            <h2 className="text-5xl font-black uppercase tracking-tight italic">Invite Family</h2>
-            <div className="flex gap-4">
-              <Input
-                type="text"
-                placeholder="GitHub Username"
-                value={newMember}
-                onChange={(e) => setNewMember(e.target.value)}
-                className="h-24 text-3xl italic"
-              />
-              <button
-                onClick={() => {
-                  if (newMember.trim()) {
-                    addInvitedMember(newMember.trim());
-                    setNewMember("");
-                  }
-                }}
-                className="bg-black text-white px-8 font-black uppercase hover:bg-zinc-800 border-4 border-black"
-              >
-                <Plus className="w-10 h-10" />
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto pr-2">
-              {invitedMembers.map((m) => (
+            return (
+              <div key={meta.title} className="space-y-2">
                 <div
-                  key={m}
-                  className="px-6 py-3 bg-zinc-100 border-4 border-black font-black uppercase flex items-center gap-3 text-xl"
-                >
-                  <Users className="w-6 h-6" /> {m}
-                </div>
-              ))}
-            </div>
-            <button
-              onClick={nextStep}
-              className="w-full bg-black text-white p-8 text-3xl font-black uppercase hover:bg-zinc-800 flex items-center justify-center gap-4 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]"
-            >
-              Almost Done! <ArrowRight className="w-10 h-10" />
-            </button>
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="space-y-10 text-center">
-            <div className="relative inline-block">
-              <Rocket className="w-32 h-32 mx-auto text-black" />
-              <motion.div
-                animate={{ y: [0, -10, 0] }}
-                transition={{ duration: 1, repeat: Infinity }}
-                className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-12 h-4 bg-black/10 rounded-full blur-md"
-              />
-            </div>
-            <h2 className="text-5xl font-black uppercase tracking-tight">Blast Off!</h2>
-            <p className="text-2xl font-bold uppercase italic opacity-70">
-              Setting up your household repo…
-            </p>
-            <div className="p-8 border-8 border-black bg-zinc-50 text-left space-y-4">
-              <p className="text-xl font-black uppercase">✅ Create Repo: home-ops</p>
-              <p className="text-xl font-black uppercase">✅ Setup Labels</p>
-              <p className="text-xl font-black uppercase">✅ Invite Family</p>
-            </div>
-
-            {/* Progress / error feedback */}
-            {progressMessage && (
-              <p className="text-lg font-bold uppercase text-zinc-600 animate-pulse">
-                {progressMessage}
-              </p>
-            )}
-            {blastError && (
-              <div
-                role="alert"
-                className="p-6 border-4 border-red-600 bg-red-50 text-red-700 font-bold text-left uppercase text-lg"
-              >
-                {blastError}
+                  className={`h-2 rounded-full ${
+                    isComplete || isActive ? "bg-[color:var(--accent-solid)]" : "bg-[color:var(--surface-2)]"
+                  }`}
+                />
+                <p className={`text-[11px] font-medium uppercase tracking-[0.16em] ${isActive ? "text-foreground" : "text-muted-foreground"}`}>
+                  {meta.eyebrow}
+                </p>
               </div>
-            )}
+            );
+          })}
+        </div>
 
-            <button
-              onClick={handleBlastOff}
-              disabled={isBlastingOff}
-              className="w-full bg-black text-white p-10 text-4xl font-black uppercase hover:bg-zinc-800 flex items-center justify-center gap-4 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {isBlastingOff ? (
-                <>
-                  <Loader2 className="w-16 h-16 animate-spin" />
-                  {progressMessage ?? "Working…"}
-                </>
-              ) : (
-                "START THE MAGIC ✨"
-              )}
-            </button>
-          </div>
-        )}
+        <SurfaceCard tone={currentStep === stepMeta.length - 1 ? "accent" : "default"} data-card-role="hero" className="relative overflow-hidden">
+          {currentStep === stepMeta.length - 1 ? (
+            <div
+              className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[image:var(--hero-glow)] opacity-50 blur-3xl"
+              data-magic-effect
+            />
+          ) : null}
 
-        {step === 4 && (
-          <div className="space-y-10 text-center">
-            <h2 className="text-7xl font-black uppercase tracking-tight">Welcome Home!</h2>
-            <p className="text-2xl font-bold uppercase italic border-y-4 border-black py-4">
-              Your Household OS is live.
-            </p>
-            {inviteFailures.length > 0 ? (
-              <div className="border-4 border-amber-500 bg-amber-50 p-6 text-left">
-                <p className="text-lg font-black uppercase text-amber-700">
-                  Repo setup finished, but these invites still need attention:
-                </p>
-                <p className="mt-2 text-base font-bold text-amber-700">
-                  {inviteFailures.join(", ")}
-                </p>
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="relative z-10 space-y-6"
+          >
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                {stepMeta[currentStep].eyebrow}
+              </p>
+              <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                {stepMeta[currentStep].title}
+              </h2>
+              <p className="text-sm leading-6 text-muted-foreground">{stepMeta[currentStep].description}</p>
+            </div>
+
+            {step === 0 ? (
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label htmlFor="household-name" className="text-sm font-semibold text-foreground">
+                    Household name
+                  </label>
+                  <Input
+                    id="household-name"
+                    type="text"
+                    placeholder="e.g. The Smith Family"
+                    className={inputClassName}
+                    value={householdName}
+                    onChange={(event) => setGithubData({ householdName: event.target.value })}
+                  />
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    This is the friendly name OctoHome shows in the app. The GitHub repo stays on the home-ops setup
+                    path behind the scenes.
+                  </p>
+                </div>
+
+                <ActionGroup>
+                  <button
+                    type="button"
+                    onClick={nextStep}
+                    disabled={!householdName.trim()}
+                    className={primaryButtonClassName}
+                  >
+                    Continue
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </ActionGroup>
               </div>
             ) : null}
-            <div className="grid grid-cols-1 gap-4">
-              <Button asChild className="h-24 text-2xl font-black border-8 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]" variant="outline">
-                <a href={PRODUCT_RELEASES_URL} target="_blank" rel="noreferrer">
-                  VIEW DESKTOP DOWNLOADS
-                </a>
-              </Button>
-              <Button asChild className="h-24 text-2xl font-black border-8 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]" variant="outline">
-                <a
-                  href={repoOwner && repoName ? `https://github.com/${repoOwner}/${repoName}` : "/"}
-                  target="_blank"
-                  rel="noreferrer"
+
+            {step === 1 ? (
+              <div className="grid gap-3 md:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGithubData({ isOrg: false, orgLogin: "" });
+                    nextStep();
+                  }}
+                  className="rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] p-5 text-left transition-colors hover:bg-[color:var(--interactive-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring-color)]"
                 >
-                  OPEN HOME REPO
-                </a>
-              </Button>
-            </div>
-            <button
-              onClick={() => window.location.href = "/"}
-              className="w-full bg-black text-white p-10 text-4xl font-black uppercase hover:scale-105 transition-transform"
-            >
-              ENTER DASHBOARD 🏠
-            </button>
-          </div>
-        )}
-      </MorphingCard>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-[color:var(--surface-1)] text-foreground">
+                    <Github className="h-5 w-5" />
+                  </div>
+                  <h3 className="mt-4 text-base font-semibold text-foreground">Personal account</h3>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                    Simple setup in your own GitHub namespace. Great when one person is administering the family repo.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGithubData({ isOrg: true });
+                    nextStep();
+                  }}
+                  className="rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] p-5 text-left transition-colors hover:bg-[color:var(--interactive-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring-color)]"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-[color:var(--surface-1)] text-foreground">
+                    <Users className="h-5 w-5" />
+                  </div>
+                  <h3 className="mt-4 text-base font-semibold text-foreground">Organization</h3>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                    Keep household administration in a shared GitHub organization with clearer ownership boundaries.
+                  </p>
+                </button>
+              </div>
+            ) : null}
+
+            {step === 2 ? (
+              <div className="space-y-6">
+                {isOrg ? (
+                  <div className="space-y-2">
+                    <label htmlFor="org-login" className="text-sm font-semibold text-foreground">
+                      Organization login
+                    </label>
+                    <Input
+                      id="org-login"
+                      type="text"
+                      placeholder="e.g. smith-family-org"
+                      className={inputClassName}
+                      value={orgLogin}
+                      onChange={(event) => setGithubData({ orgLogin: event.target.value })}
+                    />
+                    <p className="text-sm leading-6 text-muted-foreground">
+                      Enter the exact GitHub organization login, not the display name.
+                    </p>
+                  </div>
+                ) : null}
+
+                <div className="space-y-2">
+                  <label htmlFor="invite-member" className="text-sm font-semibold text-foreground">
+                    Invite GitHub usernames
+                  </label>
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <Input
+                      id="invite-member"
+                      type="text"
+                      placeholder="GitHub username"
+                      className={inputClassName}
+                      value={newMember}
+                      onChange={(event) => setNewMember(event.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (newMember.trim()) {
+                          addInvitedMember(newMember.trim());
+                          setNewMember("");
+                        }
+                      }}
+                      className={secondaryButtonClassName}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-sm font-semibold text-foreground">Family members</p>
+                  <div className="flex flex-wrap gap-2">
+                    {invitedMembers.length > 0 ? (
+                      invitedMembers.map((member) => (
+                        <span
+                          key={member}
+                          className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] px-3 py-1.5 text-sm font-medium text-foreground"
+                        >
+                          <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                          {member}
+                        </span>
+                      ))
+                    ) : (
+                      <p className="text-sm leading-6 text-muted-foreground">
+                        No family members added yet. You can keep going and invite them later from GitHub if you want.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <ActionGroup>
+                  <button type="button" onClick={nextStep} className={primaryButtonClassName}>
+                    Continue
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </ActionGroup>
+              </div>
+            ) : null}
+
+            {step === 3 ? (
+              <div className="space-y-6">
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className={infoPanelClassName}>
+                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                      Household
+                    </p>
+                    <p className="mt-2 text-base font-semibold text-foreground">{householdName || "Unnamed household"}</p>
+                  </div>
+                  <div className={infoPanelClassName}>
+                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                      Storage
+                    </p>
+                    <p className="mt-2 text-base font-semibold text-foreground">
+                      {isOrg ? `Organization: ${orgLogin || "pending login"}` : "Personal account"}
+                    </p>
+                  </div>
+                  <div className={infoPanelClassName}>
+                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                      Invites
+                    </p>
+                    <p className="mt-2 text-base font-semibold text-foreground">
+                      {invitedMembers.length === 0 ? "No invites queued" : `${invitedMembers.length} ready to send`}
+                    </p>
+                  </div>
+                </div>
+
+                <div className={infoPanelClassName}>
+                  <div className="space-y-3">
+                    <p className="text-sm font-semibold text-foreground">What OctoHome will do next</p>
+                    <ul className="space-y-2 text-sm leading-6 text-muted-foreground">
+                      <li>Create the household repo</li>
+                      <li>Configure the labels OctoHome expects</li>
+                      <li>Invite the GitHub usernames you added here</li>
+                    </ul>
+                  </div>
+                </div>
+
+                {progressMessage ? (
+                  <div className={infoPanelClassName}>
+                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {progressMessage}
+                    </div>
+                  </div>
+                ) : null}
+
+                {blastError ? (
+                  <div
+                    role="alert"
+                    className="rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-2)] px-4 py-3 text-sm font-medium text-foreground"
+                  >
+                    {blastError}
+                  </div>
+                ) : null}
+
+                <ActionGroup>
+                  <button
+                    type="button"
+                    onClick={handleBlastOff}
+                    disabled={isBlastingOff}
+                    className={primaryButtonClassName}
+                  >
+                    {isBlastingOff ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        {progressMessage ?? "Working…"}
+                      </>
+                    ) : (
+                      <>
+                        <Rocket className="h-4 w-4" />
+                        Start setup
+                      </>
+                    )}
+                  </button>
+                </ActionGroup>
+              </div>
+            ) : null}
+
+            {step >= 4 ? (
+              <div className="space-y-6">
+                <div className="rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--interactive-bg)] p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-[color:var(--surface-1)] text-foreground">
+                      <Rocket className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-base font-semibold text-foreground">Your household repo is ready</p>
+                      <p className="text-sm leading-6 text-muted-foreground">
+                        {repoOwner && repoName ? `${repoOwner}/${repoName}` : "home-ops"} is now wired into OctoHome.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {inviteFailures.length > 0 ? (
+                  <div className="rounded-[var(--radius-control)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-2)] px-4 py-3 text-sm text-foreground">
+                    Repo setup finished, but these invites still need attention: {inviteFailures.join(", ")}
+                  </div>
+                ) : null}
+
+                <ActionGroup>
+                  <a href={PRODUCT_RELEASES_URL} target="_blank" rel="noreferrer" className={secondaryButtonClassName}>
+                    Desktop downloads
+                  </a>
+                  <a
+                    href={repoOwner && repoName ? `https://github.com/${repoOwner}/${repoName}` : "/"}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={secondaryButtonClassName}
+                  >
+                    Open repo
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => window.location.assign("/")}
+                    className={primaryButtonClassName}
+                  >
+                    Enter dashboard
+                  </button>
+                </ActionGroup>
+              </div>
+            ) : null}
+          </motion.div>
+        </SurfaceCard>
+      </div>
     </div>
   );
 }
