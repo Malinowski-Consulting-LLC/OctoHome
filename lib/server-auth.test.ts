@@ -135,7 +135,23 @@ test("hasTrustedOrigin allows the request origin derived from Vercel forwarding 
     },
   });
 
-  assert.equal(hasTrustedOrigin(request), true);
+  assert.equal(hasTrustedOrigin(request, "https://octohome.vercel.app"), true);
+});
+
+test("hasTrustedOrigin blocks spoofed forwarded origins that do not match app config", async () => {
+  const { NextRequest } = await import("next/server.js");
+  const { hasTrustedOrigin } = await import("./request-security.ts");
+
+  const request = new NextRequest("http://127.0.0.1/api/tasks", {
+    method: "POST",
+    headers: {
+      origin: "https://evil.example",
+      "x-forwarded-host": "evil.example",
+      "x-forwarded-proto": "https",
+    },
+  });
+
+  assert.equal(hasTrustedOrigin(request, "https://octohome.vercel.app"), false);
 });
 
 test("hasTrustedOrigin falls back to the referer origin when the origin header is absent", async () => {

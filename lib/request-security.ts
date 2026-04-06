@@ -39,15 +39,20 @@ function getAllowedRequestOrigins(request: RequestLike, appUrl?: string) {
   const allowedOrigins = new Set<string>();
   const forwardedProto = request.headers.get("x-forwarded-proto");
   const forwardedHost = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
-
-  if (forwardedProto && forwardedHost) {
-    allowedOrigins.add(`${forwardedProto}://${forwardedHost}`);
-  }
+  const forwardedOrigin = readForwardedOrigin(forwardedProto, forwardedHost);
+  const configuredOrigin = readHeaderOrigin(appUrl ?? null);
 
   allowedOrigins.add(request.nextUrl.origin);
 
-  if (appUrl) {
-    allowedOrigins.add(new URL(appUrl).origin);
+  if (configuredOrigin) {
+    allowedOrigins.add(configuredOrigin);
+  }
+
+  if (
+    forwardedOrigin &&
+    (forwardedOrigin === request.nextUrl.origin || forwardedOrigin === configuredOrigin)
+  ) {
+    allowedOrigins.add(forwardedOrigin);
   }
 
   return allowedOrigins;
@@ -63,6 +68,17 @@ function readHeaderOrigin(value: string | null) {
   } catch {
     return null;
   }
+}
+
+function readForwardedOrigin(proto: string | null, host: string | null) {
+  const normalizedProto = proto?.split(",")[0]?.trim() ?? "";
+  const normalizedHost = host?.split(",")[0]?.trim() ?? "";
+
+  if (!normalizedProto || !normalizedHost) {
+    return null;
+  }
+
+  return readHeaderOrigin(`${normalizedProto}://${normalizedHost}`);
 }
 
 export function hasTrustedOrigin(request: RequestLike, appUrl?: string) {
