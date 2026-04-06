@@ -60,13 +60,14 @@ export default function Dashboard() {
       setError(null);
       setMemberWarning(null);
 
-      const tasksUrl = `/api/tasks?owner=${encodeURIComponent(repoOwner)}&repo=${encodeURIComponent(repoName)}`;
-      const familyUrl = `/api/family?owner=${encodeURIComponent(repoOwner)}&repo=${encodeURIComponent(repoName)}`;
-
       try {
         const [tasksResult, familyResult] = await Promise.allSettled([
-          fetch(tasksUrl),
-          fetch(familyUrl),
+          fetch("/api/tasks", {
+            headers: { "x-octohome-repo-owner": repoOwner },
+          }),
+          fetch("/api/family", {
+            headers: { "x-octohome-repo-owner": repoOwner },
+          }),
         ]);
 
         if (!active) {

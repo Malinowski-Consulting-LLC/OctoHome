@@ -71,6 +71,8 @@ In your Vercel project go to **Settings → Environment Variables** and add:
 | `GITHUB_ID` | Client ID from your GitHub OAuth App. |
 | `GITHUB_SECRET` | Client Secret from your GitHub OAuth App. |
 | `APP_URL` | Canonical URL of your deployment, e.g. `https://your-project.vercel.app`. Optional for the web app itself, but required for desktop release builds because the Tauri wrapper embeds it at compile time. |
+| `UPSTASH_REDIS_REST_URL` | Required in production for mutating API rate limits. Create an Upstash Redis database and copy its REST URL. |
+| `UPSTASH_REDIS_REST_TOKEN` | Required in production for mutating API rate limits. Copy the REST token from the same Upstash Redis database. |
 
 ### Step 3 — Deploy
 
@@ -112,6 +114,9 @@ AUTH_SECRET=<generate with: openssl rand -base64 32>
 GITHUB_ID=your_github_oauth_app_client_id
 GITHUB_SECRET=your_github_oauth_app_client_secret
 APP_URL=http://localhost:3000
+# Optional locally, required in production for mutating API routes:
+UPSTASH_REDIS_REST_URL=https://your-upstash-endpoint.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your_upstash_rest_token
 ```
 
 Create a GitHub OAuth App for local development with:

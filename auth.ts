@@ -1,10 +1,13 @@
-import NextAuth from "next-auth";
+import type { NextAuthOptions } from "next-auth";
 import GitHub from "next-auth/providers/github";
 
 import { serverEnv } from "@/lib/env";
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+export const authOptions: NextAuthOptions = {
   secret: serverEnv.AUTH_SECRET,
+  session: {
+    strategy: "jwt",
+  },
   providers: [
     GitHub({
       clientId: serverEnv.GITHUB_ID,
@@ -38,4 +41,4 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return session;
     },
   },
-});
+};

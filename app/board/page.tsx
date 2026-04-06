@@ -33,9 +33,9 @@ export default function BoardPage() {
       setError(null);
       setNotice(null);
       try {
-        const res = await fetch(
-          `/api/board?owner=${encodeURIComponent(repoOwner)}&repo=${encodeURIComponent(repoName)}`
-        );
+        const res = await fetch("/api/board", {
+          headers: { "x-octohome-repo-owner": repoOwner },
+        });
         const json = await res.json();
         if (!res.ok) throw new Error(json.error ?? "Failed to fetch board");
         setTasks(json.tasks as IssueTask[]);
@@ -67,8 +67,7 @@ export default function BoardPage() {
     try {
       const res = await fetch(`/api/tasks/${num}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ owner: repoOwner, repo: repoName }),
+        headers: { "x-octohome-repo-owner": repoOwner },
       });
       const json = await res.json();
       if (!res.ok) {

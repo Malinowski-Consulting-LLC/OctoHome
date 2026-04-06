@@ -1,37 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-import { createApiErrorResponse } from "@/lib/api-errors";
+import { UnauthorizedError, createApiErrorResponse } from "@/lib/api-errors";
 import { fetchTasks, createTask } from "@/lib/github";
-import { requireGitHubAccessToken } from "@/lib/server-auth";
-
-const repoQuerySchema = z.object({
-  owner: z.string().min(1, "owner is required"),
-  repo: z.string().min(1, "repo is required"),
-});
+import { enforceMutationRateLimit } from "@/lib/server-rate-limit";
+import { assertTrustedOrigin, getGitHubAuthContext, requireHomeRepoContext } from "@/lib/server-auth";
 
 const createTaskBodySchema = z.object({
-  owner: z.string().trim().min(1),
-  repo: z.string().trim().min(1),
   title: z.string().trim().min(1),
   body: z.string().default("Created via OctoHome"),
   labels: z.array(z.string()).default([]),
 });
 
 /**
- * GET /api/tasks?owner=&repo=
- * Returns open issues (tasks) for the given repo.
+ * GET /api/tasks
+ * Returns open issues (tasks) for the authenticated user's home repo.
  */
 export async function GET(req: NextRequest) {
   try {
-    const accessToken = await requireGitHubAccessToken(req);
-
-    const { searchParams } = new URL(req.url);
-    const { owner, repo } = repoQuerySchema.parse({
-      owner: searchParams.get("owner") ?? "",
-      repo: searchParams.get("repo") ?? "",
-    });
-
+    const { accessToken, owner, repo } = await requireHomeRepoContext(req);
     const tasks = await fetchTasks(accessToken, owner, repo);
     return NextResponse.json({ tasks });
   } catch (error) {
@@ -45,13 +32,25 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const accessToken = await requireGitHubAccessToken(req);
-
+    assertTrustedOrigin(req);
+    const authContext = await getGitHubAuthContext(req);
+    if (!authContext.accessToken || !authContext.login) {
+      throw new UnauthorizedError();
+    }
+    await enforceMutationRateLimit(req, {
+      bucket: "tasks-create",
+      login: authContext.login,
+      limit: 30,
+      window: "10 m",
+    });
+    const { accessToken, owner, repo } = await requireHomeRepoContext(req, {
+      getAuthContext: async () => authContext,
+    });
     const body = createTaskBodySchema.parse(await req.json());
     const task = await createTask(
       accessToken,
-      body.owner,
-      body.repo,
+      owner,
+      repo,
       body.title,
       body.body,
       body.labels

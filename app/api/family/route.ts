@@ -1,31 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 
 import { ApiError, createApiErrorResponse } from "@/lib/api-errors";
 import { fetchStats, getOctokit } from "@/lib/github";
 import type { StoredMemberStats } from "@/lib/member-stats";
-import { requireGitHubAccessToken } from "@/lib/server-auth";
+import { requireHomeRepoContext } from "@/lib/server-auth";
 import type { FamilyMember } from "@/lib/types";
 
-const repoQuerySchema = z.object({
-  owner: z.string().min(1, "owner is required"),
-  repo: z.string().min(1, "repo is required"),
-});
-
 /**
- * GET /api/family?owner=&repo=
+ * GET /api/family
  * Returns collaborator list enriched with points/streak from stats.json.
  */
 export async function GET(req: NextRequest) {
   try {
-    const accessToken = await requireGitHubAccessToken(req);
-
-    const { searchParams } = new URL(req.url);
-    const { owner, repo } = repoQuerySchema.parse({
-      owner: searchParams.get("owner") ?? "",
-      repo: searchParams.get("repo") ?? "",
-    });
-
+    const { accessToken, owner, repo } = await requireHomeRepoContext(req);
     const octokit = getOctokit(accessToken);
 
     // Collaborator listing requires push access. Catch 403 explicitly so the

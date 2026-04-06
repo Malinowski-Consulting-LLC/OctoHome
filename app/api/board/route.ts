@@ -1,30 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 
 import { createApiErrorResponse } from "@/lib/api-errors";
 import { getOctokit } from "@/lib/github";
-import { requireGitHubAccessToken } from "@/lib/server-auth";
-
-const repoQuerySchema = z.object({
-  owner: z.string().min(1, "owner is required"),
-  repo: z.string().min(1, "repo is required"),
-});
+import { requireHomeRepoContext } from "@/lib/server-auth";
 
 /**
- * GET /api/board?owner=&repo=
+ * GET /api/board
  * Returns all issues (open + closed, no PRs) for kanban board rendering.
  * Paginates exhaustively until every page has been retrieved.
  */
 export async function GET(req: NextRequest) {
   try {
-    const accessToken = await requireGitHubAccessToken(req);
-
-    const { searchParams } = new URL(req.url);
-    const { owner, repo } = repoQuerySchema.parse({
-      owner: searchParams.get("owner") ?? "",
-      repo: searchParams.get("repo") ?? "",
-    });
-
+    const { accessToken, owner, repo } = await requireHomeRepoContext(req);
     const octokit = getOctokit(accessToken);
 
     const allIssues = await octokit.paginate(octokit.issues.listForRepo, {

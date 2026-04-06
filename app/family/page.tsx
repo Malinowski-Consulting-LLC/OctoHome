@@ -19,9 +19,9 @@ export default function FamilyPage() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(
-          `/api/family?owner=${encodeURIComponent(repoOwner)}&repo=${encodeURIComponent(repoName)}`
-        );
+        const res = await fetch("/api/family", {
+          headers: { "x-octohome-repo-owner": repoOwner },
+        });
         const json = await res.json();
         if (!res.ok) throw new Error(json.error ?? "Failed to fetch family data");
         setMembers(json.members);

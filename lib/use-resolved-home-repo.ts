@@ -33,6 +33,7 @@ export function useResolvedHomeRepo() {
   const sessionLogin = session?.user?.login ?? "";
   const hasRepo = Boolean(repoOwner && repoName);
   const loginChanged = Boolean(githubUsername && sessionLogin && githubUsername !== sessionLogin);
+  const requestedOwner = loginChanged ? "" : repoOwner;
   const shouldDiscover =
     sessionStatus !== "loading" && Boolean(sessionLogin) && (loginChanged || !hasRepo || refreshKey > 0);
 
@@ -49,7 +50,10 @@ export function useResolvedHomeRepo() {
 
     async function discoverRepo() {
       try {
-        const res = await fetch("/api/home", { cache: "no-store" });
+        const res = await fetch("/api/home", {
+          cache: "no-store",
+          headers: requestedOwner ? { "x-octohome-repo-owner": requestedOwner } : undefined,
+        });
         const payload = (await res.json().catch(() => ({}))) as HomeDiscoveryResponse;
 
         if (cancelled) {
@@ -103,7 +107,7 @@ export function useResolvedHomeRepo() {
     return () => {
       cancelled = true;
     };
-  }, [refreshKey, sessionLogin, setGithubData, shouldDiscover]);
+  }, [refreshKey, requestedOwner, sessionLogin, setGithubData, shouldDiscover]);
 
   let status: ResolvedHomeRepoStatus;
   if (sessionStatus === "loading") {

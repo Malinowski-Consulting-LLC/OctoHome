@@ -26,9 +26,9 @@ export default function TasksPage() {
       setError(null);
       setNotice(null);
       try {
-        const res = await fetch(
-          `/api/tasks?owner=${encodeURIComponent(repoOwner)}&repo=${encodeURIComponent(repoName)}`
-        );
+        const res = await fetch("/api/tasks", {
+          headers: { "x-octohome-repo-owner": repoOwner },
+        });
         const json = await res.json();
         if (!res.ok) throw new Error(json.error ?? "Failed to fetch tasks");
         setTasks(json.tasks as IssueTask[]);
@@ -60,8 +60,7 @@ export default function TasksPage() {
     try {
       const res = await fetch(`/api/tasks/${num}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ owner: repoOwner, repo: repoName }),
+        headers: { "x-octohome-repo-owner": repoOwner },
       });
       const json = await res.json();
       if (!res.ok) {

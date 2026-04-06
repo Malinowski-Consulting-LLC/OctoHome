@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Atkinson_Hyperlegible } from "next/font/google";
+import { getServerSession } from "next-auth";
 import "./globals.css";
-import { auth } from "@/auth";
+import { authOptions } from "@/auth";
 import { SessionProvider } from "next-auth/react";
 
 const atkinson = Atkinson_Hyperlegible({
@@ -21,7 +22,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
+  const session = await getServerSession(authOptions);
 
   return (
     <html lang="en" className={atkinson.variable}>

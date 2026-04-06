@@ -10,7 +10,8 @@ import {
   setupDefaultLabels,
   waitForRepo,
 } from "@/lib/github";
-import { getGitHubAuthContext } from "@/lib/server-auth";
+import { enforceMutationRateLimit } from "@/lib/server-rate-limit";
+import { assertTrustedOrigin, getGitHubAuthContext } from "@/lib/server-auth";
 
 const setupSchema = z.object({
   householdName: z.string().trim().min(1).max(100),
@@ -33,6 +34,7 @@ const setupSchema = z.object({
  */
 export async function POST(req: NextRequest) {
   try {
+    assertTrustedOrigin(req);
     const { accessToken, login } = await getGitHubAuthContext(req);
 
     if (!accessToken) throw new UnauthorizedError();
@@ -43,6 +45,13 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
+
+    await enforceMutationRateLimit(req, {
+      bucket: "onboarding-setup",
+      login,
+      limit: 5,
+      window: "1 h",
+    });
 
     const body = setupSchema.parse(await req.json());
     const { householdName, isOrg, orgLogin, invitedMembers } = body;
@@ -107,8 +116,11 @@ export async function POST(req: NextRequest) {
     // Invite family members concurrently (failures are soft — reported but don't abort)
     const inviteResults = await Promise.all(
       invitedMembers.map(async (member) => {
-        const result = await inviteFamilyMember(accessToken, owner, repoName, member);
-        return { username: member, success: result !== null };
+        const result = await inviteFamilyMember(accessToken, owner, repoName, member, isOrg);
+        if (!result.success) {
+          console.error(`Failed to invite ${member}: ${result.error}`);
+        }
+        return { username: member, ...result };
       })
     );
 

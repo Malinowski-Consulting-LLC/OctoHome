@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-import { ApiError, createApiErrorResponse } from "@/lib/api-errors";
+import { ApiError, UnauthorizedError, createApiErrorResponse } from "@/lib/api-errors";
 import { commitFile } from "@/lib/github";
-import { requireGitHubAccessToken } from "@/lib/server-auth";
+import { enforceMutationRateLimit } from "@/lib/server-rate-limit";
+import { assertTrustedOrigin, getGitHubAuthContext, requireHomeRepoContext } from "@/lib/server-auth";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 const CRON_DAYS = ["1", "2", "3", "4", "5", "6", "0"] as const; // GitHub crons: 0-6 is Sun-Sat
@@ -47,7 +48,7 @@ jobs:
       issues: write
     steps:
       - name: Create Household Issue
-        uses: actions/github-script@v7
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
         with:
           script: |
             await github.rest.issues.create({
@@ -59,8 +60,6 @@ jobs:
 }
 
 const templateBodySchema = z.object({
-  owner: z.string().trim().min(1),
-  repo: z.string().trim().min(1),
   title: z.string().trim().min(1, "Routine title is required").max(200),
   days: z
     .array(z.enum(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]))
@@ -75,8 +74,20 @@ const templateBodySchema = z.object({
  */
 export async function POST(req: NextRequest) {
   try {
-    const accessToken = await requireGitHubAccessToken(req);
-
+    assertTrustedOrigin(req);
+    const authContext = await getGitHubAuthContext(req);
+    if (!authContext.accessToken || !authContext.login) {
+      throw new UnauthorizedError();
+    }
+    await enforceMutationRateLimit(req, {
+      bucket: "templates-create",
+      login: authContext.login,
+      limit: 10,
+      window: "1 h",
+    });
+    const { accessToken, owner, repo } = await requireHomeRepoContext(req, {
+      getAuthContext: async () => authContext,
+    });
     const body = templateBodySchema.parse(await req.json());
 
     const slug = toSafeSlug(body.title);
@@ -93,8 +104,8 @@ export async function POST(req: NextRequest) {
     try {
       await commitFile(
         accessToken,
-        body.owner,
-        body.repo,
+        owner,
+        repo,
         path,
         content,
         `Add recurring routine: ${body.title}`

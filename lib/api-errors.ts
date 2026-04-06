@@ -1,14 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from "next/server.js";
 import { ZodError } from "zod";
 
 export class ApiError extends Error {
-  constructor(
-    message: string,
-    public readonly status: number,
-    public readonly publicMessage = message
-  ) {
+  readonly status: number;
+  readonly publicMessage: string;
+
+  constructor(message: string, status: number, publicMessage = message) {
     super(message);
     this.name = "ApiError";
+    this.status = status;
+    this.publicMessage = publicMessage;
   }
 }
 
