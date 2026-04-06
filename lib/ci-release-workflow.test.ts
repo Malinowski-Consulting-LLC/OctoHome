@@ -74,3 +74,14 @@ test("CI workflow passes the stable toolchain to rust-toolchain", async () => {
     /^        with:\r?\n(?:          .*?\r?\n)*?          toolchain: stable$/m
   );
 });
+
+test("CI workflow tells tauri-action to run the Tauri CLI through npx", async () => {
+  const workflow = await readWorkflow();
+  const releaseJob = getJobBlock(workflow, "release");
+  const publishStep = getNamedStep(releaseJob, "Build and publish Tauri app");
+
+  assert.match(
+    publishStep,
+    /^          tauriScript: npx tauri$/m
+  );
+});

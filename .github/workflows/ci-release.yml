@@ -184,5 +184,6 @@ jobs:
             Maintainers can start from: https://github.com/Malinowski-Consulting-LLC/OctoHome/blob/main/.github/RELEASE_TEMPLATE.md
           releaseDraft: false
           prerelease: false
+          tauriScript: npx tauri
           args: ${{ matrix.args }}
 
