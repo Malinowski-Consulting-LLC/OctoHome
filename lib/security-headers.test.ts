@@ -15,11 +15,15 @@ test("buildContentSecurityPolicy hardens production without unsafe-eval", () => 
   const csp = buildContentSecurityPolicy("production");
 
   assert.match(csp, /default-src 'self'/);
-  assert.match(csp, /img-src 'self' data: blob: https:/);
+  assert.match(
+    csp,
+    /img-src 'self' data: blob: https:\/\/avatars\.githubusercontent\.com https:\/\/\*\.githubusercontent\.com/
+  );
   assert.match(csp, /object-src 'none'/);
   assert.match(csp, /frame-ancestors 'none'/);
   assert.match(csp, /upgrade-insecure-requests/);
   assert.doesNotMatch(csp, /unsafe-eval/);
+  assert.doesNotMatch(csp, /img-src 'self' data: blob: https:(?:;|$)/);
 });
 
 test("getSecurityHeaders includes the expected response headers for production", () => {

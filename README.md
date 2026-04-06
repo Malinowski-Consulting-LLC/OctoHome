@@ -36,7 +36,7 @@ Powered by GitHub, designed for households.
 
 - **Next.js 16** with the App Router
 - **React 19** and **TypeScript**
-- **Auth.js (NextAuth v5)** with GitHub OAuth
+- **Auth.js (NextAuth v4)** with GitHub OAuth
 - **Octokit** for repository, issue, collaborator, label, and file operations
 - **Tailwind CSS 4**, **Radix UI**, and **Framer Motion**
 - **Zustand** for client-side onboarding and app state

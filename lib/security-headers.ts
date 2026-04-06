@@ -10,7 +10,7 @@ export function buildContentSecurityPolicy(environment: Environment) {
     "font-src 'self' data:",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    "img-src 'self' data: blob: https:",
+    "img-src 'self' data: blob: https://avatars.githubusercontent.com https://*.githubusercontent.com",
     "manifest-src 'self'",
     "media-src 'self'",
     "object-src 'none'",

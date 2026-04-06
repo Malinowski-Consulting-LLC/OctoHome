@@ -30,7 +30,11 @@ export async function requireGitHubAccessToken(request: NextRequest) {
 }
 
 type AuthContextResolver = typeof getGitHubAuthContext;
-type HomeRepoResolver = (token: string, login: string) => Promise<HomeRepoSummary | null>;
+type HomeRepoResolver = (
+  token: string,
+  login: string,
+  preferredOwner?: string
+) => Promise<HomeRepoSummary | null>;
 
 export function assertTrustedOrigin(request: NextRequest, appUrl = serverEnv.APP_URL) {
   if (!hasTrustedOrigin(request, appUrl)) {
