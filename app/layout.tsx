@@ -4,8 +4,7 @@ import { getServerSession } from "next-auth";
 import Script from "next/script";
 import "./globals.css";
 import { authOptions } from "@/auth";
-import { AppearanceProvider } from "@/components/appearance-provider";
-import { SessionProvider } from "next-auth/react";
+import { RootProviders } from "@/components/root-providers";
 import { getAppearanceBootstrapScript } from "@/lib/appearance";
 
 const atkinson = Atkinson_Hyperlegible({
@@ -42,9 +41,7 @@ export default async function RootLayout({
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: getAppearanceBootstrapScript() }}
         />
-        <AppearanceProvider>
-          <SessionProvider session={session}>{children}</SessionProvider>
-        </AppearanceProvider>
+        <RootProviders session={session}>{children}</RootProviders>
       </body>
     </html>
   );
